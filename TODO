@@ -1,0 +1,5 @@
+rename models.Notification to models.Reminder, bring back 'confirm'
+make new subclass of models.Action called models.Advice (for informational messaging)
+think of a better name for models.Occurrence
+make new subclass of models.Action called models.Webhook
+create separate web views for appointment reminders and advice
