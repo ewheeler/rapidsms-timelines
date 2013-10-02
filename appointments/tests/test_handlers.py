@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from datetime import timedelta
 
-from .base import (AppointmentDataTestCase, Notification, Appointment,
+from .base import (OccurrenceDataTestCase, Notification, Occurrence,
     TimelineSubscription, now)
 from ..handlers.confirm import ConfirmHandler
 from ..handlers.move import MoveHandler
@@ -11,7 +11,7 @@ from ..handlers.quit import QuitHandler
 from ..handlers.status import StatusHandler
 
 
-class NewHandlerTestCase(AppointmentDataTestCase):
+class NewHandlerTestCase(OccurrenceDataTestCase):
     "Keyword handler for adding users to timelines"
 
     def setUp(self):
@@ -74,8 +74,8 @@ class NewHandlerTestCase(AppointmentDataTestCase):
         del NewHandler._mock_backend
 
 
-class ConfirmHandlerTestCase(AppointmentDataTestCase):
-    "Keyword handler for confirming appointments."
+class ConfirmHandlerTestCase(OccurrenceDataTestCase):
+    "Keyword handler for confirming occurrences."
 
     def setUp(self):
         self.timeline = self.create_timeline(name='Test', slug='foo')
@@ -84,8 +84,8 @@ class ConfirmHandlerTestCase(AppointmentDataTestCase):
             timeline=self.timeline, connection=self.connection, pin='bar')
         ConfirmHandler._mock_backend = self.connection.backend
         self.milestone = self.create_milestone(timeline=self.timeline)
-        self.appointment = self.create_appointment(milestone=self.milestone)
-        self.notification = self.create_notification(appointment=self.appointment)
+        self.occurrence = self.create_occurrence(milestone=self.milestone)
+        self.notification = self.create_notification(occurrence=self.occurrence)
 
     def test_help(self):
         "Prefix and keyword should return the help."
@@ -94,33 +94,33 @@ class ConfirmHandlerTestCase(AppointmentDataTestCase):
         reply = replies[0]
         self.assertTrue('APPT CONFIRM <KEY> <NAME/ID>' in reply)
 
-    def test_appointment_confirmed(self):
-        "Successfully confirm an upcoming appointment."
+    def test_occurrence_confirmed(self):
+        "Successfully confirm an upcoming occurrence."
         replies = ConfirmHandler.test('APPT CONFIRM foo bar', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
         self.assertTrue(reply.startswith('Thank you'))
         notification = Notification.objects.get(pk=self.notification.pk)
-        self.assertTrue(notification.confirmed)
-        self.assertEqual(notification.status, Notification.STATUS_CONFIRMED)
-        appointment = Appointment.objects.get(pk=self.appointment.pk)
-        self.assertTrue(appointment.confirmed)
+        self.assertTrue(notification.completed)
+        self.assertEqual(notification.status, Notification.STATUS_COMPLETED)
+        occurrence = Occurrence.objects.get(pk=self.occurrence.pk)
+        self.assertTrue(occurrence.completed)
 
-    def test_no_upcoming_appointment(self):
-        "Matched user has no upcoming appointment notifications."
+    def test_no_upcoming_occurrence(self):
+        "Matched user has no upcoming occurrence notifications."
         self.notification.delete()
         replies = ConfirmHandler.test('APPT CONFIRM foo bar', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no unconfirmed' in reply)
+        self.assertTrue('no uncompleted' in reply)
 
     def test_already_confirmed(self):
-        "Matched user has already confirmed the upcoming appointment."
+        "Matched user has already confirmed the upcoming occurrence."
         self.notification.confirm()
         replies = ConfirmHandler.test('APPT CONFIRM foo bar', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no unconfirmed' in reply)
+        self.assertTrue('no uncompleted' in reply)
 
     def test_no_subscription(self):
         "Name/ID does not match a subscription."
@@ -140,8 +140,8 @@ class ConfirmHandlerTestCase(AppointmentDataTestCase):
         self.assertTrue('does not match an active subscription' in reply)
 
 
-class StatusHandlerTestCase(AppointmentDataTestCase):
-    "Keyword handler for updating the status of appointments."
+class StatusHandlerTestCase(OccurrenceDataTestCase):
+    "Keyword handler for updating the status of occurrences."
 
     def setUp(self):
         self.timeline = self.create_timeline(name='Test', slug='foo')
@@ -150,7 +150,7 @@ class StatusHandlerTestCase(AppointmentDataTestCase):
             timeline=self.timeline, connection=self.connection, pin='bar')
         StatusHandler._mock_backend = self.connection.backend
         self.milestone = self.create_milestone(timeline=self.timeline)
-        self.appointment = self.create_appointment(milestone=self.milestone)
+        self.occurrence = self.create_occurrence(milestone=self.milestone)
 
     def test_help(self):
         "Prefix and keyword should return the help."
@@ -159,10 +159,10 @@ class StatusHandlerTestCase(AppointmentDataTestCase):
         reply = replies[0]
         self.assertTrue('APPT STATUS <KEY> <NAME/ID> <SAW|MISSED>' in reply)
 
-    def test_appointment_status_updated(self):
-        "Successfully update a recent appointment."
-        for status in Appointment.STATUS_CHOICES[1:]:
-            appt = self.create_appointment(milestone=self.milestone)
+    def test_occurrence_status_updated(self):
+        "Successfully update a recent occurrence."
+        for status in Occurrence.STATUS_CHOICES[1:]:
+            appt = self.create_occurrence(milestone=self.milestone)
             replies = StatusHandler.test('APPT STATUS foo bar %s' % status[1].upper(),
                                          identity=self.connection.identity)
             self.assertEqual(len(replies), 1)
@@ -170,38 +170,38 @@ class StatusHandlerTestCase(AppointmentDataTestCase):
             self.assertTrue(reply.startswith('Thank you'))
             self.assertTrue(appt.status, status[0])
 
-    def test_appointment_status_invalid_update(self):
+    def test_occurrence_status_invalid_update(self):
         "Do not update if supplied status text is not in STATUS_CHOICES."
         replies = StatusHandler.test('APPT STATUS foo bar FOO', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
         self.assertTrue(reply.startswith('Sorry, the status update must be in'))
 
-    def test_no_recent_appointment(self):
-        "Matched user has no recent appointment."
-        self.appointment.delete()
+    def test_no_recent_occurrence(self):
+        "Matched user has no recent occurrence."
+        self.occurrence.delete()
         replies = StatusHandler.test('APPT STATUS foo bar SAW', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no recent appointments' in reply)
+        self.assertTrue('no recent occurrences' in reply)
 
-    def test_no_recent_appointment_needing_update(self):
-        "Matched user has no recent appointment that needs updating."
-        self.appointment.status = Appointment.STATUS_MISSED
-        self.appointment.save()
+    def test_no_recent_occurrence_needing_update(self):
+        "Matched user has no recent occurrence that needs updating."
+        self.occurrence.status = Occurrence.STATUS_MISSED
+        self.occurrence.save()
         replies = StatusHandler.test('APPT STATUS foo bar MISSED', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no recent appointments' in reply)
+        self.assertTrue('no recent occurrences' in reply)
 
-    def test_future_appointment(self):
-        "Matched user has no recent appointment."
-        self.appointment.date = self.appointment.date + timedelta(days=1)
-        self.appointment.save()
+    def test_future_occurrence(self):
+        "Matched user has no recent occurrence."
+        self.occurrence.date = self.occurrence.date + timedelta(days=1)
+        self.occurrence.save()
         replies = StatusHandler.test('APPT STATUS foo bar SAW', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no recent appointments' in reply)
+        self.assertTrue('no recent occurrences' in reply)
 
     def test_no_subscription(self):
         "Name/ID does not match a subscription."
@@ -221,8 +221,8 @@ class StatusHandlerTestCase(AppointmentDataTestCase):
         self.assertTrue('does not match an active subscription' in reply)
 
 
-class MoveHandlerTestCase(AppointmentDataTestCase):
-    "Keyword handler for rescheduling of appointments."
+class MoveHandlerTestCase(OccurrenceDataTestCase):
+    "Keyword handler for rescheduling of occurrences."
 
     def setUp(self):
         self.timeline = self.create_timeline(name='Test', slug='foo')
@@ -231,7 +231,7 @@ class MoveHandlerTestCase(AppointmentDataTestCase):
             timeline=self.timeline, connection=self.connection, pin='bar')
         MoveHandler._mock_backend = self.connection.backend
         self.milestone = self.create_milestone(timeline=self.timeline)
-        self.appointment = self.create_appointment(milestone=self.milestone,
+        self.occurrence = self.create_occurrence(milestone=self.milestone,
                                                    date=now() + timedelta(hours=1))
         self.tomorrow = (now() + timedelta(days=1)).strftime('%Y-%m-%d')
 
@@ -242,19 +242,19 @@ class MoveHandlerTestCase(AppointmentDataTestCase):
         reply = replies[0]
         self.assertTrue('APPT MOVE <KEY> <NAME/ID> <DATE>' in reply)
 
-    def test_appointment_reschedule(self):
-        "Successfully reschedule an upcoming appointment."
-        self.assertEqual(1, Appointment.objects.all().count())
+    def test_occurrence_reschedule(self):
+        "Successfully reschedule an upcoming occurrence."
+        self.assertEqual(1, Occurrence.objects.all().count())
         replies = MoveHandler.test('APPT MOVE foo bar %s' % self.tomorrow,
                                    identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
         self.assertTrue(reply.startswith('Thank you'))
-        self.assertEqual(2, Appointment.objects.all().count())
-        reschedule = Appointment.objects.all()[0]
-        self.assertEqual(reschedule.appointments.all()[0], self.appointment)
+        self.assertEqual(2, Occurrence.objects.all().count())
+        reschedule = Occurrence.objects.all()[0]
+        self.assertEqual(reschedule.occurrences.all()[0], self.occurrence)
 
-    def test_appointment_reschedule_malformed_date(self):
+    def test_occurrence_reschedule_malformed_date(self):
         "Ensure the date is properly formatted."
         replies = MoveHandler.test('APPT MOVE foo bar tomorrow',
                                    identity=self.connection.identity)
@@ -262,7 +262,7 @@ class MoveHandlerTestCase(AppointmentDataTestCase):
         reply = replies[0]
         self.assertTrue(reply.startswith('Sorry, we cannot understand that date format'))
 
-    def test_appointment_reschedule_future_date(self):
+    def test_occurrence_reschedule_future_date(self):
         "Ensure the date must be in the future."
         yesterday = (now() - timedelta(days=1)).strftime('%Y-%m-%d')
         replies = MoveHandler.test('APPT MOVE foo bar %s' % yesterday,
@@ -271,36 +271,36 @@ class MoveHandlerTestCase(AppointmentDataTestCase):
         reply = replies[0]
         self.assertTrue(reply.startswith('Sorry, the reschedule date'))
 
-    def test_no_future_appointment(self):
-        "Matched user has no future appointment."
-        self.appointment.delete()
+    def test_no_future_occurrence(self):
+        "Matched user has no future occurrence."
+        self.occurrence.delete()
         replies = MoveHandler.test('APPT MOVE foo bar %s' % self.tomorrow,
                                      identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no future appointments' in reply)
+        self.assertTrue('no future occurrences' in reply)
 
-    def test_no_future_appointment_needing_update(self):
-        "Matched user has no future appointment that needs rescheduling."
-        reschedule = self.create_appointment(subscription=self.subscription,
+    def test_no_future_occurrence_needing_update(self):
+        "Matched user has no future occurrence that needs rescheduling."
+        reschedule = self.create_occurrence(subscription=self.subscription,
                                              milestone=self.milestone)
-        self.appointment.reschedule = reschedule
-        self.appointment.save()
+        self.occurrence.reschedule = reschedule
+        self.occurrence.save()
         replies = MoveHandler.test('APPT MOVE foo bar %s' % self.tomorrow,
                                      identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no future appointments' in reply)
+        self.assertTrue('no future occurrences' in reply)
 
-    def test_prior_appointment(self):
-        "Matched user has no future appointment."
-        self.appointment.date = self.appointment.date - timedelta(days=1)
-        self.appointment.save()
+    def test_prior_occurrence(self):
+        "Matched user has no future occurrence."
+        self.occurrence.date = self.occurrence.date - timedelta(days=1)
+        self.occurrence.save()
         replies = MoveHandler.test('APPT MOVE foo bar %s' % self.tomorrow,
                                      identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('no future appointments' in reply)
+        self.assertTrue('no future occurrences' in reply)
 
     def test_no_subscription(self):
         "Name/ID does not match a subscription."
@@ -322,7 +322,7 @@ class MoveHandlerTestCase(AppointmentDataTestCase):
         self.assertTrue('does not match an active subscription' in reply)
 
 
-class QuitHandlerTestCase(AppointmentDataTestCase):
+class QuitHandlerTestCase(OccurrenceDataTestCase):
     "Keyword handler for unsubscribing users to timelines"
     def setUp(self):
         self.timeline = self.create_timeline(name='Test', slug='foo')

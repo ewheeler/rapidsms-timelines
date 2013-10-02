@@ -11,18 +11,18 @@ except ImportError:  # Django < 1.4
 
 from rapidsms.router import send
 
-from .models import TimelineSubscription, Appointment, Notification
+from .models import TimelineSubscription, Occurrence, Notification
 
-APPT_REMINDER = _('This is a reminder for your upcoming appointment on %(date)s. Please confirm.')
+APPT_REMINDER = _('This is a reminder for your upcoming occurrence on %(date)s. Please confirm.')
 
 
 @task()
-def generate_appointments(days=14):
+def generate_occurrences(days=14):
     """
-    Task to create Appointment instances based on current TimelineSubscriptions
+    Task to create Occurrence instances based on current TimelineSubscriptions
 
     Arguments:
-    days: The number of upcoming days to create Appointments for
+    days: The number of upcoming days to create Occurrences for
     """
     start = datetime.date.today()
     end = start + datetime.timedelta(days=days)
@@ -32,9 +32,9 @@ def generate_appointments(days=14):
     for sub in subs:
         for milestone in sub.timeline.milestones.all():
             milestone_date = sub.start.date() + datetime.timedelta(days=milestone.offset)
-            #Create appointment(s) for this subscription within the task window
+            #Create occurrence(s) for this subscription within the task window
             if start <= milestone_date <= end:
-                appt, created = Appointment.objects.get_or_create(
+                appt, created = Occurrence.objects.get_or_create(
                                                     subscription=sub,
                                                     milestone=milestone,
                                                     date=milestone_date
@@ -42,27 +42,27 @@ def generate_appointments(days=14):
 
 
 @task()
-def send_appointment_notifications(days=7):
+def send_occurrence_notifications(days=7):
     """
-    Task to send reminders notifications for upcoming Appointment
+    Task to send reminders notifications for upcoming Occurrence
 
     Arguments:
-    days: The number of upcoming days to filter upcoming Appointments
+    days: The number of upcoming days to filter upcoming Occurrences
     """
     start = datetime.date.today()
     end = start + datetime.timedelta(days=days)
-    blacklist = [Notification.STATUS_SENT, Notification.STATUS_CONFIRMED, Notification.STATUS_MANUAL]
-    appts = Appointment.objects.filter(
+    blacklist = [Notification.STATUS_PENDING, Notification.STATUS_COMPLETED, Notification.STATUS_MANUAL]
+    appts = Occurrence.objects.filter(
         # Join subscriptions that haven't ended
         Q(Q(subscription__connection__timelines__end__gte=now()) | Q(subscription__connection__timelines__end__isnull=True)),
         subscription__connection__timelines__timeline=F('milestone__timeline'),
-        # Filter appointments in range
+        # Filter occurrences in range
         date__range=(start, end),
-    ).exclude(notifications__status__in=blacklist)
+    ).exclude(actions__status__in=blacklist)
     for appt in appts:
         msg = APPT_REMINDER % {'date': appt.date}
         send(msg, appt.subscription.connection)
-        Notification.objects.create(appointment=appt,
-                                    status=Notification.STATUS_SENT,
-                                    sent=now(),
+        Notification.objects.create(occurrence=appt,
+                                    status=Notification.STATUS_PENDING,
+                                    attempted=now(),
                                     message=msg)

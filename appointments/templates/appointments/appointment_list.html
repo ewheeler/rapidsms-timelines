@@ -16,7 +16,7 @@
                 <form id="filter-form" method="GET">
                     {% render_form form %}
                     <input class="btn btn-primary" type="submit" value="Update Filters" />
-                    <a class="btn" href="{% url 'appointment_list' %}">Clear Filters</a>
+                    <a class="btn" href="{% url 'occurrence_list' %}">Clear Filters</a>
                 </form>
             </div>
             <div class="span9">
@@ -24,7 +24,7 @@
                     <p>
                         Displaying appointments {{ table.page.start_index }} -
                         {{ table.page.end_index }} of {{ table.data.queryset.count }}.<br/>
-                        {% url 'csv_appointment_list' as csv %}
+                        {% url 'csv_occurrence_list' as csv %}
                         {% if request.GET %}
                             <a href="{{ csv }}?{{ request.GET.urlencode }}">Export results as CSV</a>
                         {% else %}

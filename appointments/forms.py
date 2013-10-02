@@ -8,7 +8,7 @@ from django.forms.util import ErrorList
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Timeline, TimelineSubscription, Appointment, Notification, now
+from .models import Timeline, TimelineSubscription, Occurrence, Notification, now
 
 
 class PlainErrorList(ErrorList):
@@ -41,7 +41,7 @@ class HandlerForm(forms.Form):
                     break
         if match is None:
             # Invalid keyword
-            raise forms.ValidationError(_('Sorry, we could not find any appointments for '
+            raise forms.ValidationError(_('Sorry, we could not find any occurrences for '
                     'the keyword: %s') % keyword)
         else:
             self.cleaned_data['timeline'] = match
@@ -71,7 +71,7 @@ class NewForm(HandlerForm):
 
     name = forms.CharField(error_messages={
         'required': _('Sorry, you must include a name or id for your '
-            'appointments subscription.')
+            'occurrences subscription.')
     })
     date = forms.DateTimeField(required=False, error_messages={
         'invalid': _('Sorry, we cannot understand that date format. '
@@ -91,7 +91,7 @@ class NewForm(HandlerForm):
                 params = {'timeline': timeline.name, 'name': name}
                 message = _('Sorry, you previously registered a %(timeline)s for '
                         '%(name)s. You will be notified when '
-                        'it is time for the next appointment.') % params
+                        'it is time for the next occurrence.') % params
                 raise forms.ValidationError(message)
         return self.cleaned_data
 
@@ -117,12 +117,12 @@ class NewForm(HandlerForm):
 
 
 class ConfirmForm(HandlerForm):
-    "Confirm an upcoming appointment."
+    "Confirm an upcoming occurrence."
 
     name = forms.CharField()
 
     def clean_name(self):
-        "Find last unconfirmed notification for upcoming appointment."
+        "Find last uncompleted notification for upcoming occurrence."
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', '')
         # name should be a pin for an active timeline subscription
@@ -135,22 +135,22 @@ class ConfirmForm(HandlerForm):
             raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
         try:
             notification = Notification.objects.filter(
-                status=Notification.STATUS_SENT,
-                confirmed__isnull=True,
-                appointment__confirmed__isnull=True,
-                appointment__reschedule__isnull=True,
-                appointment__date__gte=now(),
-                appointment__milestone__timeline__in=timelines
-            ).order_by('-sent')[0]
+                status=Notification.STATUS_PENDING,
+                completed__isnull=True,
+                occurrence__completed__isnull=True,
+                occurrence__reschedule__isnull=True,
+                occurrence__date__gte=now(),
+                occurrence__milestone__timeline__in=timelines
+            ).order_by('-attempted')[0]
         except IndexError:
-            # No unconfirmed notifications
-            raise forms.ValidationError(_('Sorry, you have no unconfirmed appointment notifications.'))
+            # No uncompleted notifications
+            raise forms.ValidationError(_('Sorry, you have no uncompleted occurrence notifications.'))
         else:
             self.cleaned_data['notification'] = notification
         return name
 
     def save(self):
-        "Mark the current notification as confirmed and return it."
+        "Mark the current notification as completed and return it."
         if not self.is_valid():
             return None
         notification = self.cleaned_data['notification']
@@ -159,15 +159,15 @@ class ConfirmForm(HandlerForm):
 
 
 class StatusForm(HandlerForm):
-    "Set the status of an appointment that a patient was seen"
+    "Set the status of an occurrence that a patient was seen"
 
     name = forms.CharField()
     status = forms.CharField()
 
     def clean_status(self):
-        "Map values from inbound messages to Appointment.STATUS_CHOICES"
+        "Map values from inbound messages to Occurrence.STATUS_CHOICES"
         raw_status = self.cleaned_data.get('status', '')
-        valid_status_update = Appointment.STATUS_CHOICES[1:]
+        valid_status_update = Occurrence.STATUS_CHOICES[1:]
         status = next((x[0] for x in valid_status_update if x[1].upper() == raw_status.upper()), None)
         if not status:
             choices = tuple([x[1].upper() for x in valid_status_update])
@@ -177,7 +177,7 @@ class StatusForm(HandlerForm):
         return status
 
     def clean_name(self):
-        "Find the most recent appointment for the patient."
+        "Find the most recent occurrence for the patient."
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', '')
         # name should be a pin for an active timeline subscription
@@ -189,31 +189,31 @@ class StatusForm(HandlerForm):
             # PIN doesn't match an active subscription for this connection
             raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
         try:
-            appointment = Appointment.objects.filter(
-                status=Appointment.STATUS_DEFAULT,
+            occurrence = Occurrence.objects.filter(
+                status=Occurrence.STATUS_DEFAULT,
                 date__lte=now(),
                 milestone__timeline__in=timelines
             ).order_by('-date')[0]
         except IndexError:
-            # No recent appointment that is not STATUS_DEFAULT
-            msg = _('Sorry, user has no recent appointments that require a status update.')
+            # No recent occurrence that is not STATUS_DEFAULT
+            msg = _('Sorry, user has no recent occurrences that require a status update.')
             raise forms.ValidationError(msg)
         else:
-            self.cleaned_data['appointment'] = appointment
+            self.cleaned_data['occurrence'] = occurrence
         return name
 
     def save(self):
-        "Mark the appointment status and return it"
+        "Mark the occurrence status and return it"
         if not self.is_valid():
             return None
-        appointment = self.cleaned_data['appointment']
-        appointment.status = self.cleaned_data['status']
-        appointment.save()
+        occurrence = self.cleaned_data['occurrence']
+        occurrence.status = self.cleaned_data['status']
+        occurrence.save()
         return {}
 
 
 class MoveForm(HandlerForm):
-    "Reschedule the next upcoming appointment for a patient"
+    "Reschedule the next upcoming occurrence for a patient"
 
     name = forms.CharField()
     date = forms.DateTimeField(error_messages={
@@ -231,7 +231,7 @@ class MoveForm(HandlerForm):
         return date
 
     def clean_name(self):
-        "Find the next appointment for the patient."
+        "Find the next occurrence for the patient."
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', '')
         # name should be a pin for an active timeline subscription
@@ -243,36 +243,36 @@ class MoveForm(HandlerForm):
             # PIN doesn't match an active subscription for this connection
             raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
         try:
-            appointment = Appointment.objects.filter(
-                status=Appointment.STATUS_DEFAULT,
+            occurrence = Occurrence.objects.filter(
+                status=Occurrence.STATUS_DEFAULT,
                 date__gte=now(),
                 milestone__timeline__in=timelines,
                 reschedule__isnull=True,
-                appointments__isnull=True,
+                occurrences__isnull=True,
             ).order_by('-date')[0]
         except IndexError:
-            # No future appointment
-            msg = _('Sorry, user has no future appointments that require a reschedule.')
+            # No future occurrence
+            msg = _('Sorry, user has no future occurrences that require a reschedule.')
             raise forms.ValidationError(msg)
         else:
-            self.cleaned_data['appointment'] = appointment
+            self.cleaned_data['occurrence'] = occurrence
         return name
 
     def save(self):
-        "Mark the appointment status and return it"
+        "Mark the occurrence status and return it"
         if not self.is_valid():
             return None
-        appointment = self.cleaned_data['appointment']
-        #serialize the old appointment values
-        params = model_to_dict(appointment)
+        occurrence = self.cleaned_data['occurrence']
+        #serialize the old occurrence values
+        params = model_to_dict(occurrence)
         #overwrite the date w/ reschedule data
         params['date'] = self.cleaned_data['date']
         params.pop('id')
-        params['milestone'] = appointment.milestone
-        params['subscription'] = appointment.subscription
-        reschedule = Appointment.objects.create(**params)
-        appointment.reschedule = reschedule
-        appointment.save()
+        params['milestone'] = occurrence.milestone
+        params['subscription'] = occurrence.subscription
+        reschedule = Occurrence.objects.create(**params)
+        occurrence.reschedule = reschedule
+        occurrence.save()
         return {}
 
 
@@ -301,7 +301,7 @@ class QuitForm(HandlerForm):
                     break
         if match is None:
             # Invalid keyword
-            raise forms.ValidationError(_('Sorry, we could not find any appointments for '
+            raise forms.ValidationError(_('Sorry, we could not find any occurrences for '
                     'the keyword: %s') % keyword)
         else:
             self.cleaned_data['timeline'] = match
@@ -346,11 +346,11 @@ def get_pins():
     return pins
 
 
-class AppointmentFilterForm(forms.Form):
-    CONFIRMED = [('false', 'Yes'), ('true', 'No')]
+class OccurrenceFilterForm(forms.Form):
+    completed = [('false', 'Yes'), ('true', 'No')]
 
     def __init__(self, *args, **kwargs):
-        super(AppointmentFilterForm, self).__init__(*args, **kwargs)
+        super(OccurrenceFilterForm, self).__init__(*args, **kwargs)
         pin_choices = [('', 'All')] + get_pins()
         pin_field = self.fields['subscription__pin']
         pin_field.choices = pin_choices
@@ -363,21 +363,21 @@ class AppointmentFilterForm(forms.Form):
     subscription__pin = forms.ChoiceField(choices=[('', 'All')],
                                           label=_("Pin"),
                                           required=False)
-    status = forms.ChoiceField(choices=[('', 'All')] + Appointment.STATUS_CHOICES,
+    status = forms.ChoiceField(choices=[('', 'All')] + Occurrence.STATUS_CHOICES,
                                required=False)
 
-    confirmed__isnull = forms.ChoiceField(choices=[('', 'All')] + CONFIRMED,
-                                          label=_("Confirmed"),
+    completed__isnull = forms.ChoiceField(choices=[('', 'All')] + completed,
+                                          label=_("completed"),
                                           required=False)
 
-    def clean_confirmed__isnull(self):
-        confirmed = self.cleaned_data.get('confirmed__isnull', None)
-        if confirmed:
-            confirmed = False if confirmed == 'false' else True
-        return confirmed
+    def clean_completed__isnull(self):
+        completed = self.cleaned_data.get('completed__isnull', None)
+        if completed:
+            completed = False if completed == 'false' else True
+        return completed
 
     def get_items(self):
         if self.is_valid():
             filters = dict([(k, v) for k, v in self.cleaned_data.iteritems() if v or v is False])
-            return Appointment.objects.filter(**filters)
-        return Appointment.objects.none()
+            return Occurrence.objects.filter(**filters)
+        return Occurrence.objects.none()

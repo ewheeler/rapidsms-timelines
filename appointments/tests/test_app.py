@@ -2,75 +2,75 @@ from __future__ import unicode_literals
 
 import datetime
 
-from .base import AppointmentDataTestCase
-from ..models import Appointment, Notification
-from ..tasks import generate_appointments, send_appointment_notifications
+from .base import OccurrenceDataTestCase
+from ..models import Occurrence, Notification
+from ..tasks import generate_occurrences, send_occurrence_notifications
 
 
-class AppointmentAppTestCase(AppointmentDataTestCase):
+class OccurrenceAppTestCase(OccurrenceDataTestCase):
     "Integration test for larger SMS workflow."
 
     def setUp(self):
-        super(AppointmentAppTestCase, self).setUp()
+        super(OccurrenceAppTestCase, self).setUp()
         self.timeline = self.create_timeline(name='Test', slug='foo')
         self.milestone = self.create_milestone(timeline=self.timeline, offset=1)
         self.connection = self.lookup_connections('5555555555')[0]
 
     def test_join(self):
-        "Join timeline then generate upcoming appointments."
+        "Join timeline then generate upcoming occurrences."
         msg = self.receive('APPT NEW FOO 123', self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        # Single appointment should be created
-        generate_appointments()
-        appointment = Appointment.objects.get(subscription__connection=self.connection, milestone=self.milestone)
+        # Single occurrence should be created
+        generate_occurrences()
+        occurrence = Occurrence.objects.get(subscription__connection=self.connection, milestone=self.milestone)
         tomorrow = datetime.date.today() + datetime.timedelta(days=self.milestone.offset)
-        self.assertEqual(tomorrow, appointment.date)
+        self.assertEqual(tomorrow, occurrence.date)
 
-    def test_confirm_appointment(self):
-        "Generate a notification and confirm an appointment."
+    def test_confirm_occurrence(self):
+        "Generate a notification and confirm an occurrence."
         subscription = self.create_timeline_subscription(connection=self.connection, timeline=self.timeline)
-        generate_appointments()
-        send_appointment_notifications()
+        generate_occurrences()
+        send_occurrence_notifications()
         reminder = self.outbound.pop()
         self.assertTrue(reminder.text.startswith('This is a reminder'))
         msg = self.receive('APPT CONFIRM FOO {0}'.format(subscription.pin), self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        appointment = Appointment.objects.get(subscription__connection=self.connection, milestone=self.milestone)
-        self.assertTrue(appointment.confirmed)
+        occurrence = Occurrence.objects.get(subscription__connection=self.connection, milestone=self.milestone)
+        self.assertTrue(occurrence.completed)
 
-    def test_made_appointment(self):
-        "Mark an appointment as seen."
+    def test_made_occurrence(self):
+        "Mark an occurrence as seen."
         yesterday = datetime.date.today() - datetime.timedelta(days=self.milestone.offset)
-        # Joined yesterday so appointment would be today
+        # Joined yesterday so occurrence would be today
         subscription = self.create_timeline_subscription(
             connection=self.connection, timeline=self.timeline, start=yesterday)
-        generate_appointments()
-        send_appointment_notifications()
+        generate_occurrences()
+        send_occurrence_notifications()
         reminder = self.outbound.pop()
         self.assertTrue(reminder.text.startswith('This is a reminder'))
-        msg = self.receive('APPT STATUS FOO {0} SAW'.format(subscription.pin), self.connection)
+        msg = self.receive('APPT STATUS FOO {0} ACHIEVED'.format(subscription.pin), self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        appointment = Appointment.objects.get(subscription__connection=self.connection, milestone=self.milestone)
-        self.assertEqual(Appointment.STATUS_SAW, appointment.status)
+        occurrence = Occurrence.objects.get(subscription__connection=self.connection, milestone=self.milestone)
+        self.assertEqual(Occurrence.STATUS_ACHIEVED, occurrence.status)
 
-    def test_missed_appointment(self):
-        "Mark an appointment as missed."
+    def test_missed_occurrence(self):
+        "Mark an occurrence as missed."
         yesterday = datetime.date.today() - datetime.timedelta(days=self.milestone.offset)
-        # Joined yesterday so appointment would be today
+        # Joined yesterday so occurrence would be today
         subscription = self.create_timeline_subscription(
             connection=self.connection, timeline=self.timeline, start=yesterday)
-        generate_appointments()
-        send_appointment_notifications()
+        generate_occurrences()
+        send_occurrence_notifications()
         reminder = self.outbound.pop()
         self.assertTrue(reminder.text.startswith('This is a reminder'))
         msg = self.receive('APPT STATUS FOO {0} MISSED'.format(subscription.pin), self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        appointment = Appointment.objects.get(subscription__connection=self.connection, milestone=self.milestone)
-        self.assertEqual(Appointment.STATUS_MISSED, appointment.status)
+        occurrence = Occurrence.objects.get(subscription__connection=self.connection, milestone=self.milestone)
+        self.assertEqual(Occurrence.STATUS_MISSED, occurrence.status)
 
     def test_join_then_quit(self):
         "Join a timeline then quit."
@@ -80,22 +80,22 @@ class AppointmentAppTestCase(AppointmentDataTestCase):
         msg = self.receive('APPT QUIT FOO 123', self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        generate_appointments()
-        # No appointments should be generated
-        appointments = Appointment.objects.filter(subscription__connection=self.connection)
-        self.assertEqual(0, appointments.count())
+        generate_occurrences()
+        # No occurrences should be generated
+        occurrences = Occurrence.objects.filter(subscription__connection=self.connection)
+        self.assertEqual(0, occurrences.count())
 
     def test_quit_reminders(self):
         "Don't send reminders for unsubscribed users."
         msg = self.receive('APPT NEW FOO 123', self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        generate_appointments()
+        generate_occurrences()
         msg = self.receive('APPT QUIT FOO 123', self.connection)
         reply = self.outbound.pop()
         self.assertTrue(reply.text.startswith('Thank you'))
-        send_appointment_notifications()
+        send_occurrence_notifications()
         self.assertEqual(0, len(self.outbound), self.outbound)
-        appointment = Appointment.objects.get(subscription__connection=self.connection, milestone=self.milestone)
-        notifications = Notification.objects.filter(appointment=appointment)
+        occurrence = Occurrence.objects.get(subscription__connection=self.connection, milestone=self.milestone)
+        notifications = Notification.objects.filter(occurrence=occurrence)
         self.assertEqual(0, notifications.count())

@@ -8,10 +8,10 @@ from django.contrib.auth.models import User
 from rapidsms.models import Connection, Backend
 from rapidsms.tests.harness import RapidTest
 
-from ..models import Timeline, TimelineSubscription, Milestone, Appointment, Notification, now
+from ..models import Timeline, TimelineSubscription, Milestone, Occurrence, Notification, now
 
 
-class AppointmentDataTestCase(RapidTest):
+class OccurrenceDataTestCase(RapidTest):
     "Helper methods for creating test data."
 
     def get_random_string(self, length=10):
@@ -68,8 +68,8 @@ class AppointmentDataTestCase(RapidTest):
             defaults['timeline'] = self.create_timeline()
         return Milestone.objects.create(**defaults)
 
-    def create_appointment(self, **kwargs):
-        "Create a dummy appointment."
+    def create_occurrence(self, **kwargs):
+        "Create a dummy occurrence."
         defaults = {
             'date': now().date(),
         }
@@ -78,7 +78,7 @@ class AppointmentDataTestCase(RapidTest):
             defaults['milestone'] = self.create_milestone()
         if 'subscription' not in defaults:
             defaults['subscription'] = self.create_timeline_subscription()
-        return Appointment.objects.create(**defaults)
+        return Occurrence.objects.create(**defaults)
 
     def create_notification(self, **kwargs):
         "Create a dummy notification."
@@ -86,8 +86,8 @@ class AppointmentDataTestCase(RapidTest):
             'message': self.get_random_string(),
         }
         defaults.update(kwargs)
-        if 'appointment' not in defaults:
-            defaults['appointment'] = self.create_appointment()
+        if 'occurrence' not in defaults:
+            defaults['occurrence'] = self.create_occurrence()
         return Notification.objects.create(**defaults)
 
     def create_user(self, username=None, password=None, email=None,

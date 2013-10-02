@@ -1,4 +1,4 @@
-from .models import Appointment
+from .models import Occurrence
 import django_tables2 as tables
 
 
@@ -12,6 +12,6 @@ class ApptTable(tables.Table):
     milestone = tables.Column(orderable=False)
 
     class Meta:
-        model = Appointment
+        model = Occurrence
         exclude = ('id', 'notes')
         sequence = ("timeline", "...", "connection", "subscription")

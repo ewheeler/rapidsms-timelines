@@ -11,7 +11,7 @@ except ImportError:  # Django < 1.4
 
 
 class Timeline(models.Model):
-    "A series of milestones which users can subscribe for milestone reminders."
+    "A series of milestones which users can subscribe for milestone events."
 
     name = models.CharField(max_length=255)
     slug = models.CharField(max_length=255, help_text=_('The keyword(s) to match '
@@ -27,7 +27,7 @@ class Timeline(models.Model):
 
 
 class TimelineSubscription(models.Model):
-    "Subscribing a user to a timeline of reminders."
+    "Subscribing a user to a timeline of events."
 
     timeline = models.ForeignKey(Timeline, related_name='subscribers')
     connection = models.ForeignKey('rapidsms.Connection', related_name='timelines')
@@ -40,7 +40,7 @@ class TimelineSubscription(models.Model):
 
 
 class Milestone(models.Model):
-    "A point on the timeline that needs an appointment."
+    "A point on the timeline that when reached creates an occurrence."
 
     name = models.CharField(max_length=255)
     timeline = models.ForeignKey(Timeline, related_name='milestones')
@@ -50,68 +50,74 @@ class Milestone(models.Model):
         return self.name
 
 
-class Appointment(models.Model):
+class Occurrence(models.Model):
     "Instance of a subscribed user hitting a milestone."
 
     STATUS_DEFAULT = 1
-    STATUS_SAW = 2
+    STATUS_ACHIEVED = 2
     STATUS_MISSED = 3
 
     STATUS_CHOICES = [
         (STATUS_DEFAULT, _('Not Yet Occurred')),
-        (STATUS_SAW, _('Saw')),
+        (STATUS_ACHIEVED, _('Achieved')),
         (STATUS_MISSED, _('Missed')),
     ]
 
-    milestone = models.ForeignKey(Milestone, related_name='appointments')
-    subscription = models.ForeignKey(TimelineSubscription, related_name='appointments')
-    date = models.DateField(_('appointment date'))
-    confirmed = models.DateTimeField(blank=True, null=True, default=None)
-    reschedule = models.ForeignKey('self', blank=True, null=True, related_name='appointments')
+    milestone = models.ForeignKey(Milestone, related_name='occurrences')
+    subscription = models.ForeignKey(TimelineSubscription, related_name='occurrences')
+    date = models.DateField(_('occurence date'))
+    completed = models.DateTimeField(blank=True, null=True, default=None)
+    reschedule = models.ForeignKey('self', blank=True, null=True,
+                                   related_name='occurrences')
     status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_DEFAULT)
     notes = models.CharField(max_length=160, blank=True, default='')
 
     def __unicode__(self):
-        return 'Appointment for %s on %s' % (self.subscription.connection, self.date.isoformat())
+        return 'Occurrence for %s on %s' % (self.subscription.connection, self.date.isoformat())
 
     class Meta:
         ordering = ['-date']
         permissions = (
-            ('view_appointment', 'Can View Appointments'),
+            ('view_occurrence', 'Can View Occurrences'),
         )
 
 
-class Notification(models.Model):
-    "Record of user notification for an appointment."
+class Action(models.Model):
 
-    STATUS_SENT = 1
-    STATUS_CONFIRMED = 2
+    STATUS_PENDING = 1
+    STATUS_COMPLETED = 2
     STATUS_MANUAL = 3
     STATUS_ERROR = 4
 
     STATUS_CHOICES = (
-        (STATUS_SENT, _('Sent')),
-        (STATUS_CONFIRMED, _('Confirmed')),
+        (STATUS_PENDING, _('Pending')),
+        (STATUS_COMPLETED, _('Completed')),
         (STATUS_MANUAL, _('Manually Confirmed')),
         (STATUS_ERROR, _('Error')),
     )
 
-    appointment = models.ForeignKey(Appointment, related_name='notifications')
-    status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_SENT)
-    sent = models.DateTimeField(blank=True, null=True, default=now)
-    confirmed = models.DateTimeField(blank=True, null=True, default=None)
+    occurrence = models.ForeignKey(Occurrence, related_name='actions')
+    status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_PENDING)
+    attempted = models.DateTimeField(blank=True, null=True, default=now)
+    completed = models.DateTimeField(blank=True, null=True, default=None)
+
+
+class Notification(Action):
+    "Record of subscriber notification for an action."
+
     message = models.CharField(max_length=160)
 
     def __unicode__(self):
         return 'Notification for %s on %s' %\
-               (self.appointment.subscription.connection, self.sent.isoformat())
+               (self.occurrence.subscription.connection,
+                self.attempted.isoformat())
 
     def confirm(self, manual=False):
-        "Mark appointment as confirmed."
-        confirmed = now()
-        status = Notification.STATUS_MANUAL if manual else Notification.STATUS_CONFIRMED
-        self.confirmed = confirmed
+        "Mark occurrence as completed."
+        completed = now()
+        status = Notification.STATUS_MANUAL if manual else Notification.STATUS_COMPLETED
+        self.completed = completed
         self.status = status
-        Notification.objects.filter(pk=self.pk).update(confirmed=confirmed, status=status)
-        self.appointment.confirmed = confirmed
-        Appointment.objects.filter(pk=self.appointment_id).update(confirmed=confirmed)
+        Notification.objects.filter(pk=self.pk).update(completed=completed, status=status)
+        self.occurrence.completed = completed
+        Occurrence.objects.filter(pk=self.occurrence_id).update(completed=completed)

@@ -6,11 +6,11 @@ from . import views
 
 urlpatterns = patterns('',
     url(r'^$',
-        views.AppointmentList.as_view(),
-        name='appointment_list',
+        views.OccurrenceList.as_view(),
+        name='occurrence_list',
     ),
     url(r'^csv/$',
-        views.CSVAppointmentList.as_view(),
-        name='csv_appointment_list',
+        views.CSVOccurrenceList.as_view(),
+        name='csv_occurrence_list',
     ),
 )

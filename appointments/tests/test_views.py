@@ -7,14 +7,14 @@ from appointments.unicsv import UnicodeCSVReader
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
 
-from ..models import Appointment
-from .base import AppointmentDataTestCase
+from ..models import Occurrence
+from .base import OccurrenceDataTestCase
 
 
-__all__ = ['AppointmentListViewTestCase', 'AppointmentExportViewTestCase']
+__all__ = ['OccurrenceListViewTestCase', 'OccurrenceExportViewTestCase']
 
 
-class AppointmentViewTestCase(AppointmentDataTestCase):
+class OccurrenceViewTestCase(OccurrenceDataTestCase):
     url_name = None
     perm_names = []
     url_args = []
@@ -22,7 +22,7 @@ class AppointmentViewTestCase(AppointmentDataTestCase):
     get_kwargs = {}
 
     def setUp(self):
-        super(AppointmentViewTestCase, self).setUp()
+        super(OccurrenceViewTestCase, self).setUp()
         self.username = 'testuser'
         self.password = 'password'
         self.permissions = self.get_permissions()
@@ -58,9 +58,9 @@ class AppointmentViewTestCase(AppointmentDataTestCase):
         return self.client.get(url, *args, **kwargs)
 
 
-class AppointmentListViewTestCase(AppointmentViewTestCase):
-    url_name = 'appointment_list'
-    perm_names = [('appointments', 'view_appointment')]
+class OccurrenceListViewTestCase(OccurrenceViewTestCase):
+    url_name = 'occurrence_list'
+    perm_names = [('appointments', 'view_occurrence')]
 
     def _extract(self, response):
         """Extract the information we're interested in from the context."""
@@ -69,22 +69,22 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
         return queryset, form
 
     def test_no_permission(self):
-        """Permission is required to get the Appointment list page."""
+        """Permission is required to get the Occurrence list page."""
         self.user.user_permissions.all().delete()
         response = self._get()
         self.assertEquals(response.status_code, 302)  # redirect to login
 
-    def test_no_appointments(self):
-        """Retrieve the Appointment list when there are no appointments."""
-        Appointment.objects.all().delete()
+    def test_no_occurrences(self):
+        """Retrieve the Occurrence list when there are no occurrences."""
+        Occurrence.objects.all().delete()
         response = self._get()
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
         self.assertEquals(queryset.count(), 0)
 
-    def test_appointment(self):
-        """Retrieve the Appointment list when there is one Appointment."""
-        report = self.create_appointment()
+    def test_occurrence(self):
+        """Retrieve the Occurrence list when there is one Occurrence."""
+        report = self.create_occurrence()
         response = self._get()
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -94,7 +94,7 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
     def test_pagination(self):
         """The reports list should show 10 items per page."""
         for i in range(11):
-            self.create_appointment()
+            self.create_occurrence()
         response = self._get(get_kwargs={'page': 2})
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -106,8 +106,8 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
         """Reports should be filtered by timeline."""
         timeline = self.create_timeline()
         subscription = self.create_timeline_subscription(timeline=timeline)
-        appt = self.create_appointment(subscription=subscription)
-        self.create_appointment()
+        appt = self.create_occurrence(subscription=subscription)
+        self.create_occurrence()
         response = self._get(get_kwargs={'subscription__timeline': timeline.id})
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -118,7 +118,7 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
         """Form does no validation on timeline, but no results returned."""
         timeline = self.create_timeline()
         subscription = self.create_timeline_subscription(timeline=timeline)
-        self.create_appointment(subscription=subscription)
+        self.create_occurrence(subscription=subscription)
         response = self._get(get_kwargs={'subscription__timeline': 10})
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -127,9 +127,9 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
 
     def test_filter_status(self):
         """Reports should be filtered by status."""
-        params = {'status': Appointment.STATUS_MISSED}
-        appt = self.create_appointment(**params)
-        self.create_appointment()
+        params = {'status': Occurrence.STATUS_MISSED}
+        appt = self.create_occurrence(**params)
+        self.create_occurrence()
         response = self._get(get_kwargs=params)
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -138,7 +138,7 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
 
     def test_filter_bad_status(self):
         """Form has error & no results returned if invalid status is given."""
-        self.create_appointment()
+        self.create_occurrence()
         response = self._get(get_kwargs={'status': 7})
         self.assertEquals(response.status_code, 200)
         queryset, form = self._extract(response)
@@ -146,15 +146,15 @@ class AppointmentListViewTestCase(AppointmentViewTestCase):
         self.assertTrue('status' in form.errors)
 
 
-class AppointmentExportViewTestCase(AppointmentViewTestCase):
-    url_name = 'csv_appointment_list'
-    perm_names = [('appointments', 'view_appointment')]
+class OccurrenceExportViewTestCase(OccurrenceViewTestCase):
+    url_name = 'csv_occurrence_list'
+    perm_names = [('appointments', 'view_occurrence')]
 
     def _extract(self, response):
         reader = UnicodeCSVReader(StringIO(response.content))
         return [line for line in reader]
 
-    def _check_appointment(self, response, *appts):
+    def _check_occurrence(self, response, *appts):
         self.assertEquals(response.status_code, 200)
         csv = self._extract(response)
         self.assertEquals(len(csv), 1 + len(appts))  # include headers row
@@ -166,37 +166,37 @@ class AppointmentExportViewTestCase(AppointmentViewTestCase):
             self.assertEquals(len(line), num_columns)
 
     def test_no_permissions(self):
-        """Permission is required to export a Appointment list."""
+        """Permission is required to export a Occurrence list."""
         self.user.user_permissions.all().delete()
         response = self._get()
         self.assertEquals(response.status_code, 302)  # redirect to login
 
-    def test_no_appointments(self):
+    def test_no_occurrences(self):
         """Export reports list when there are no reports."""
-        Appointment.objects.all().delete()
+        Occurrence.objects.all().delete()
         response = self._get()
-        self._check_appointment(response)
+        self._check_occurrence(response)
 
-    def test_appointment(self):
-        """Export reports list when there is one Appointment."""
-        report = self.create_appointment()
+    def test_occurrence(self):
+        """Export reports list when there is one Occurrence."""
+        report = self.create_occurrence()
         response = self._get()
-        self._check_appointment(response, report)
+        self._check_occurrence(response, report)
 
     def test_filter_subscription_timeline(self):
         """Reports export should be filtered by timeline."""
         timeline = self.create_timeline()
         subscription = self.create_timeline_subscription(timeline=timeline)
-        appt = self.create_appointment(subscription=subscription)
-        self.create_appointment()
+        appt = self.create_occurrence(subscription=subscription)
+        self.create_occurrence()
         response = self._get(get_kwargs={'subscription__timeline': timeline.id})
-        self._check_appointment(response, appt)
+        self._check_occurrence(response, appt)
 
     def test_filter_bad_subscription_timeline(self):
         """Invalid status causes redirect to regular list view."""
-        self.create_appointment()
+        self.create_occurrence()
         response = self._get(get_kwargs={'status': 'bad'}, follow=True)
-        correct_url = reverse('appointment_list') + '?status=bad'
+        correct_url = reverse('occurrence_list') + '?status=bad'
         self.assertRedirects(response, correct_url)
         queryset = response.context['table'].data.queryset
         form = response.context['form']
@@ -205,17 +205,17 @@ class AppointmentExportViewTestCase(AppointmentViewTestCase):
 
     def test_filter_status(self):
         """Reports export should be filtered by status."""
-        params = {'status': Appointment.STATUS_MISSED}
-        appt = self.create_appointment(**params)
-        self.create_appointment()
+        params = {'status': Occurrence.STATUS_MISSED}
+        appt = self.create_occurrence(**params)
+        self.create_occurrence()
         response = self._get(get_kwargs=params)
-        self._check_appointment(response, appt)
+        self._check_occurrence(response, appt)
 
     def test_filter_bad_status(self):
         """Invalid status causes redirect to regular list view."""
-        self.create_appointment()
+        self.create_occurrence()
         response = self._get(get_kwargs={'status': 'bad'}, follow=True)
-        correct_url = reverse('appointment_list') + '?status=bad'
+        correct_url = reverse('occurrence_list') + '?status=bad'
         self.assertRedirects(response, correct_url)
         queryset = response.context['table'].data.queryset
         form = response.context['form']

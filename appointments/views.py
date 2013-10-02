@@ -11,21 +11,21 @@ from django.views.generic.base import TemplateView
 
 from django_tables2 import RequestConfig
 
-from .forms import AppointmentFilterForm
+from .forms import OccurrenceFilterForm
 from .tables import ApptTable
 
 
-class AppointmentMixin(object):
+class OccurrenceMixin(object):
     """Allow filtering by"""
-    @method_decorator(permission_required('appointments.view_appointment'))
+    @method_decorator(permission_required('appointments.view_occurrence'))
     def dispatch(self, request, *args, **kwargs):
-        self.form = AppointmentFilterForm(request.GET)
+        self.form = OccurrenceFilterForm(request.GET)
         self.items = self.form.get_items()
-        return super(AppointmentMixin, self).dispatch(request, *args, **kwargs)
+        return super(OccurrenceMixin, self).dispatch(request, *args, **kwargs)
 
 
-class AppointmentList(AppointmentMixin, TemplateView):
-    """Displays a paginated lits of appointments."""
+class OccurrenceList(OccurrenceMixin, TemplateView):
+    """Displays a paginated list of occurrences."""
     template_name = 'appointments/appointment_list.html'
     table_template_name = 'django_tables2/bootstrap-tables.html'
     items_per_page = 10
@@ -43,10 +43,10 @@ class AppointmentList(AppointmentMixin, TemplateView):
         }
 
 
-class CSVAppointmentList(AppointmentMixin, View):
+class CSVOccurrenceList(OccurrenceMixin, View):
     """Export filtered reports to a CSV file."""
     # Fields to include in the csv, in order.
-    filename = 'appointments'
+    filename = 'occurrences'
 
     def get_table(self):
         table = ApptTable(self.items)
@@ -55,7 +55,7 @@ class CSVAppointmentList(AppointmentMixin, View):
 
     def get(self, request, *args, **kwargs):
         if not self.form.is_valid():
-            url = reverse('appointment_list')
+            url = reverse('occurrence_list')
             if request.GET:
                 url = '{0}?{1}'.format(url, request.GET.urlencode())
             return HttpResponseRedirect(url)
