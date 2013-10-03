@@ -10,6 +10,7 @@ from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 class AppointmentHandler(KeywordHandler):
     "Base keyword handler for the APPT prefix."
 
+    # TODO change to 'subscribe' or 'join'?
     prefix = 'APPT'
     form = None
     success_text = ''

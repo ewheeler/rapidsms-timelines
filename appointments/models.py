@@ -46,6 +46,10 @@ class Milestone(models.Model):
     timeline = models.ForeignKey(Timeline, related_name='milestones')
     offset = models.IntegerField()
 
+    # default message for simple timelines of non-interactive messages
+    message = models.CharField(max_length=160, blank=True, null=True,
+                               default=None)
+
     def __unicode__(self):
         return self.name
 

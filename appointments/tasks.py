@@ -60,7 +60,14 @@ def send_occurrence_notifications(days=7):
         date__range=(start, end),
     ).exclude(actions__status__in=blacklist)
     for appt in appts:
-        msg = APPT_REMINDER % {'date': appt.date}
+        # TODO allow both static messages AND appointment reminders for a
+        # milestone
+        if appt.milestone.message is not None:
+            # if milestone has a default static message, fire away
+            msg = appt.milestone.message
+        else:
+            # otherwise format message as an appointment reminder
+            msg = APPT_REMINDER % {'date': appt.date}
         send(msg, appt.subscription.connection)
         Notification.objects.create(occurrence=appt,
                                     status=Notification.STATUS_PENDING,

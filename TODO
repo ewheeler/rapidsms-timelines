@@ -3,3 +3,4 @@ make new subclass of models.Action called models.Advice (for informational messa
 think of a better name for models.Occurrence
 make new subclass of models.Action called models.Webhook
 create separate web views for appointment reminders and advice
+use signals to trigger Actions?
