@@ -13,7 +13,7 @@ from rapidsms.router import send
 
 from .models import TimelineSubscription, Occurrence, Notification
 
-APPT_REMINDER = _('This is a reminder for your upcoming occurrence on %(date)s. Please confirm.')
+APPT_REMINDER = _('This is a reminder for your upcoming appointment on %(date)s. Please confirm.')
 
 
 @task()
