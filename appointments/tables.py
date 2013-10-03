@@ -10,7 +10,8 @@ class ApptTable(tables.Table):
     subscription = tables.Column(accessor=tables.utils.A('subscription.pin'),
                                  order_by="subscription.pin")
     milestone = tables.Column(orderable=False)
-
+    message = tables.Column(accessor=tables.utils.A('milestone.message'),
+                                 order_by="milestone.message")
     class Meta:
         model = Occurrence
         exclude = ('id', 'notes')
