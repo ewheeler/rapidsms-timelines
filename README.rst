@@ -1,22 +1,31 @@
-RapidSMS Appointments
+RapidSMS timelines
 ========================
 
-rapidsms-appointments is a reusable RapidSMS application for sending appointment
-reminders. Users can be subscribed to a timeline of milestones for future appointments. Reminders
-are send to the patient or staff to remind them of the appointment. Appointments
+rapidsms-timelines is a reusable RapidSMS application for sending appointment
+reminders. Users can be subscribed to a timeline of milestones for future timelines. Reminders
+are send to the patient or staff to remind them of the appointment. timelines
 can be confirmed or rescheduled by patient or staff. It also tracks the history of confirmed
-notifications and missed/made appointments.
+notifications and missed/made timelines.
+
+To migrate an existing rapidsms-appointments app, be sure to backup data with
+natural keys::
+    python manage.py dumpdata appointments --natural --indent=4 1> appointments_backup.json
+
+
+And then rename tables::
+    https://gist.github.com/jamesmfriedman/6168003
+
 
 .. image::
-    https://secure.travis-ci.org/caktus/rapidsms-appointments.png?branch=master
+    https://secure.travis-ci.org/ewheeler/rapidsms-timelines.png?branch=master
     :alt: Build Status
-        :target: https://secure.travis-ci.org/caktus/rapidsms-appointments
+        :target: https://secure.travis-ci.org/ewheeler/rapidsms-timelines
 
 
 Dependencies
 -----------------------------------
 
-rapidsms-appointments currently runs on Python 2.6 and 2.7 and requires the following
+rapidsms-timelines currently runs on Python 2.6 and 2.7 and requires the following
 Python packages:
 
 - Django >= 1.3
@@ -27,16 +36,16 @@ Python packages:
 Documentation
 -----------------------------------
 
-Documentation on using rapidsms-appointments is available on
-`Read The Docs <http://readthedocs.org/docs/rapidsms-appointments/>`_.
+Documentation on using rapidsms-timelines is available on
+`Read The Docs <http://readthedocs.org/docs/rapidsms-timelines/>`_.
 
 
 Translations
 -----------------------------------
 
 The translations for rapidsms-appointment are managed on our
-`Transifex project <https://www.transifex.com/projects/p/rapidsms-appointments/>`_.
-If you are interested in translating rapidsms-appointments into your native language
+`Transifex project <https://www.transifex.com/projects/p/rapidsms-timelines/>`_.
+If you are interested in translating rapidsms-timelines into your native language
 you can join the project and add your language.
 
 
@@ -65,15 +74,15 @@ of the `tox <http://tox.readthedocs.org/>`_ configuration.::
 License
 --------------------------------------
 
-rapidsms-appointments is released under the BSD License. See the
-`LICENSE <https://github.com/caktus/rapidsms-appointments/blob/master/LICENSE>`_ file for more details.
+rapidsms-timelines is released under the BSD License. See the
+`LICENSE <https://github.com/ewheeler/rapidsms-timelines/blob/master/LICENSE>`_ file for more details.
 
 
 Contributing
 --------------------------------------
 
 If you think you've found a bug or are interested in contributing to this project
-check out `rapidsms-appointments on Github <https://github.com/caktus/rapidsms-appointments>`_.
+check out `rapidsms-timelines on Github <https://github.com/ewheeler/rapidsms-timelines>`_.
 
 Development sponsored by `Caktus Consulting Group, LLC
 <http://www.caktusgroup.com/services>`_.

@@ -13,15 +13,15 @@ def read_file(filename):
 
 
 setup(
-    name='rapidsms-appointments',
-    version=__import__('appointments').__version__,
+    name='rapidsms-timelines',
+    version=__import__('timelines').__version__,
     author='Caktus Consulting Group',
     author_email='solutions@caktusgroup.com',
     packages=find_packages(),
     include_package_data=True,
-    url='https://github.com/caktus/rapidsms-appointments/',
+    url='https://github.com/ewheeler/rapidsms-timelines/',
     license='BSD',
-    description=u' '.join(__import__('appointments').__doc__.splitlines()).strip(),
+    description=u' '.join(__import__('timelines').__doc__.splitlines()).strip(),
     classifiers=[
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Intended Audience :: Developers',

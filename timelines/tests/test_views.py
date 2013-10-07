@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 from urllib import urlencode
 from cStringIO import StringIO
 
-from appointments.unicsv import UnicodeCSVReader
+from timelines.unicsv import UnicodeCSVReader
 
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
@@ -60,7 +60,7 @@ class OccurrenceViewTestCase(OccurrenceDataTestCase):
 
 class OccurrenceListViewTestCase(OccurrenceViewTestCase):
     url_name = 'occurrence_list'
-    perm_names = [('appointments', 'view_occurrence')]
+    perm_names = [('timelines', 'view_occurrence')]
 
     def _extract(self, response):
         """Extract the information we're interested in from the context."""
@@ -148,7 +148,7 @@ class OccurrenceListViewTestCase(OccurrenceViewTestCase):
 
 class OccurrenceExportViewTestCase(OccurrenceViewTestCase):
     url_name = 'csv_occurrence_list'
-    perm_names = [('appointments', 'view_occurrence')]
+    perm_names = [('timelines', 'view_occurrence')]
 
     def _extract(self, response):
         reader = UnicodeCSVReader(StringIO(response.content))

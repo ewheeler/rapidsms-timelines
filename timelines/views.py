@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 
-from appointments.unicsv import UnicodeCSVWriter
+from timelines.unicsv import UnicodeCSVWriter
 
 from django.contrib.auth.decorators import permission_required
 from django.core.urlresolvers import reverse
@@ -17,7 +17,7 @@ from .tables import ApptTable
 
 class OccurrenceMixin(object):
     """Allow filtering by"""
-    @method_decorator(permission_required('appointments.view_occurrence'))
+    @method_decorator(permission_required('timelines.view_occurrence'))
     def dispatch(self, request, *args, **kwargs):
         self.form = OccurrenceFilterForm(request.GET)
         self.items = self.form.get_items()
@@ -26,7 +26,7 @@ class OccurrenceMixin(object):
 
 class OccurrenceList(OccurrenceMixin, TemplateView):
     """Displays a paginated list of occurrences."""
-    template_name = 'appointments/appointment_list.html'
+    template_name = 'timelines/timelines_list.html'
     table_template_name = 'django_tables2/bootstrap-tables.html'
     items_per_page = 10
 
