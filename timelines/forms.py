@@ -367,7 +367,7 @@ class OccurrenceFilterForm(forms.Form):
                                required=False)
 
     completed__isnull = forms.ChoiceField(choices=[('', 'All')] + completed,
-                                          label=_("completed"),
+                                          label=_("Completed"),
                                           required=False)
 
     def clean_completed__isnull(self):

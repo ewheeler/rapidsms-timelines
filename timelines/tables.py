@@ -16,3 +16,4 @@ class ApptTable(tables.Table):
         model = Occurrence
         exclude = ('id', 'notes')
         sequence = ("timeline", "...", "connection", "subscription")
+        attrs = {'id': 'timelines-table', 'class': 'table-striped'}

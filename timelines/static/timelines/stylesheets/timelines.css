@@ -7,3 +7,17 @@
     -moz-box-sizing: border-box;
     box-sizing: border-box;
 }
+
+#timelines-table {
+  font-size: 95%;
+}
+
+#timelines-table th, td {
+  padding: 0.66em 0.33em 0px 0.33em;
+}
+
+#timelines-table td.message {
+  font-size: 85%;
+  min-width: 22em;
+  max-width: 22em;
+}
