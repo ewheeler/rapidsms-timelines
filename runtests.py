@@ -19,7 +19,7 @@ if not settings.configured:
             'rapidsms',
             'rapidsms.contrib.handlers',
             'django_tables2',
-            'appointments',
+            'timelines',
         ),
         TEMPLATE_CONTEXT_PROCESSORS = (
             'django.contrib.auth.context_processors.auth',
@@ -30,8 +30,8 @@ if not settings.configured:
             'django.contrib.messages.context_processors.messages',
             'django.core.context_processors.request',
         ),
-        ROOT_URLCONF='appointments.tests.urls',
-        PROJECT_NAME='Appointments Test',
+        ROOT_URLCONF='timelines.tests.urls',
+        PROJECT_NAME='Timelines Test',
         SITE_ID=1,
         SECRET_KEY='this-is-just-for-tests-so-not-that-secret',
         INSTALLED_BACKENDS = {
@@ -48,7 +48,7 @@ from django.test.utils import get_runner
 def runtests():
     TestRunner = get_runner(settings)
     test_runner = TestRunner(verbosity=1, interactive=True, failfast=False)
-    args = sys.argv[1:] or ['appointments', ]
+    args = sys.argv[1:] or ['timelines', ]
     failures = test_runner.run_tests(args)
     sys.exit(failures)
 

@@ -159,7 +159,7 @@ class OccurrenceExportViewTestCase(OccurrenceViewTestCase):
         csv = self._extract(response)
         self.assertEquals(len(csv), 1 + len(appts))  # include headers row
 
-        num_columns = 8
+        num_columns = 9
         headers, data = csv[0], csv[1:]
         self.assertEquals(len(headers), num_columns)
         for line in data:
