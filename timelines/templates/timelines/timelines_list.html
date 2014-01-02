@@ -4,13 +4,115 @@
 
 {% block title %}Timelines and milestones{% endblock title %}
 
+{% block extra_javascript %}
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/pablo.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/templates.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/blueprint.js"></script>
+{% endblock extra_javascript %}
+
 {% block extra_stylesheets %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}timelines/fonts/fonts.css">
     <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}timelines/stylesheets/timelines.css" />
+	<style>
+		.actor-label {
+			text-transform: uppercase;
+			color: #666666;
+			font-family: 'Helvetica Neue', Arial, sans-serif;
+			font-weight: bold;
+			text-shadow: 0 1px rgba(0, 0, 0, 0.125);
+		}
+		.icon-label {
+			text-transform: uppercase;
+			color: #666666;
+			text-shadow: 0 1px rgba(255, 255, 255, 0.5);
+			text-align: center;
+		}
+		.touchpoint-label {
+			text-transform: uppercase;
+		}
+		.service-component-label {
+			text-transform: uppercase;
+			text-shadow: 0 1px rgba(255, 255, 255, 0.5);
+		}
+		.header-tagline {
+			text-shadow: 0 1px rgba(0, 0, 0, 0.5);
+		}
+	</style>
 {% endblock extra_stylesheets %}
 
 {% block content %}
     <div class="span12" id="timelines">
         <div class="page-header"><h1>Timelines and milestones</h1></div>
+        <div class="row-fluid">
+	<div id="anc" class="span6 well" style="background-color: #fff;"></div>
+	<div id="pnc" class="span6 well" style="background-color: #fff;"></div>
+			<script type="text/javascript">
+
+				var timelineData = [
+					{94: {'child': '1st trimester'}},
+					{188: {'child': '2nd trimester'}},
+					{270: {'mother': 'pregnancy', 'child': '3rd trimester'}},
+					{271: {
+						'mother': 'labour and birth',
+						'child': 'birth'}},
+					{645: {'child': 'infancy'}},
+					{1000: {'mother': 'postpartum and breastfeeding', 'child': 'childhood'}},
+				]
+
+				var ancServiceComponents = [
+					{'start': 0, 'stop': 135, 'components': ['User Registration', 'Patient Registration']},
+					{'start': 135, 'stop': 270, 'components': ['Reminder', 'Confirmation']},
+					{'start': 270, 'stop': 405, 'components': ['Birth Registration', 'Emergency Response']},
+					{'start': 0, 'stop': 405, 'components': ['ANC Advice']},
+				]
+
+				var pncServiceComponents = [
+					{'start': 270, 'stop': 640, 'components': ['Reminder', 'Confirmation']},
+					{'start': 270, 'stop': 1000, 'components': ['Growth Monitoring']},
+					{'start': 270, 'stop': 640, 'components': ['PNC Advice']},
+				]
+
+				var ancTouchpoints = [
+					{15: {'vht': 'pregnancy registered'}},
+					{80: {'vht': 'ANC reminder'}},
+					{90: {'clinic': 'ANC visit'}},
+					{160: {'vht': 'ANC reminder'}},
+					{170: {'clinic': 'ANC visit'}},
+					{230: {'vht': 'ANC reminder'}},
+					{240: {'clinic': 'ANC visit'}},
+					{281: {'vht': 'birth registered'}},
+					{285: {'clinic': 'birth emergency: clinic notified', 'point-type': 'optional'}},
+					{285: {'district': 'birth emergency: district notified', 'point-type': 'optional'}},
+				]
+
+				var pncTouchpoints = [
+					{311: {'vht': 'PNC reminder'}},
+					{316: {'clinic': 'PNC visit'}},
+					{467: {'vht': 'PNC reminder'}},
+					{472: {'clinic': 'PNC visit'}},
+					{630: {'vht': 'PNC reminder'}},
+					{635: {'clinic': 'PNC visit'}},
+				]
+
+				// TODO introspect these from templates.js?
+				var actorNames = [
+					'mother',
+					'child',
+					'vht',
+					'clinic',
+					'district',
+					'country',
+					'phone',
+				];
+
+				var ancDescription = 'Antenatal care reminders & birth registration';
+				var pncDescription = 'Postnatal care reminders & growth monitoring';
+				drawBlueprint("#anc", 355, actorNames, ancServiceComponents, ancTouchpoints, ancDescription);
+				drawBlueprint("#pnc", 355, actorNames, pncServiceComponents, pncTouchpoints, pncDescription);
+
+			</script>
+	</div>
+
         <div class="row-fluid">
             <div class="span3">
                 <form id="filter-form" method="GET">
