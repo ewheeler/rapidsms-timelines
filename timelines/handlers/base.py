@@ -11,14 +11,15 @@ class AppointmentHandler(KeywordHandler):
     "Base keyword handler for the APPT prefix."
 
     # TODO change to 'subscribe' or 'join'?
-    prefix = 'APPT'
+    prefix = 'APPT|REPORT|REP'
     form = None
     success_text = ''
 
     @classmethod
     def _keyword(cls):
         if hasattr(cls, "keyword"):
-            pattern = r"^\s*(?:%s)\s*(?:%s)(?:[\s,;:]+(.+))?$" % (cls.prefix, cls.keyword)
+            pattern = r"^\s*(?:%s)\s*(?:%s)(?:[\s,;:]+(.+))?$"\
+                % (cls.prefix, cls.keyword)
         else:
             pattern = r"^\s*(?:%s)\s*?$" % cls.prefix
         return re.compile(pattern, re.IGNORECASE)
@@ -42,7 +43,8 @@ class AppointmentHandler(KeywordHandler):
         "Return help mesage."
         if self.help_text:
             keyword = self.keyword.split('|')[0].upper()
-            help_text = self.help_text % {'prefix': self.prefix, 'keyword': keyword}
+            help_text = self.help_text % {'prefix': self.prefix,
+                                          'keyword': keyword}
             self.respond(help_text)
 
     def unknown(self):
@@ -50,4 +52,5 @@ class AppointmentHandler(KeywordHandler):
         keyword = self.keyword.split('|')[0].upper()
         params = {'prefix': self.prefix, 'keyword': keyword}
         self.respond(_('Sorry, we cannot understand that message. '
-            'For additional help send: %(prefix)s %(keyword)s') % params)
+                       'For additional help send: %(prefix)s %(keyword)s')
+                     % params)
