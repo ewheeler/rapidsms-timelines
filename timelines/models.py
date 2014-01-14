@@ -108,7 +108,7 @@ class Action(models.Model):
 
 class Notification(Action):
     "Record of subscriber notification for an action."
-
+    # TODO i18n!
     message = models.CharField(max_length=160)
 
     def __unicode__(self):
