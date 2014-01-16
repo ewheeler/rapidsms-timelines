@@ -37,8 +37,5 @@ setup(
     long_description=read_file('README.rst'),
     test_suite="runtests.runtests",
     zip_safe=False,
-    install_requires=[
-        'Celery>=3.0',
-    ],
     install_requires=requirements
 )

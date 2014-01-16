@@ -1,1 +1,2 @@
 django-hvad==0.3
+Celery>=3.0
