@@ -9,14 +9,20 @@ try:
 except ImportError:  # Django < 1.4
     now = datetime.datetime.now
 
+from hvad.models import TranslatableModel
+from hvad.models import TranslatedFields
+
 
 class Timeline(models.Model):
     "A series of milestones which users can subscribe for milestone events."
 
     name = models.CharField(max_length=255)
-    slug = models.CharField(max_length=255, help_text=_('The keyword(s) to match '
-        'in messages from the user. Specify multiple keywords by separating them '
-        'with vertical bars. e.g., "birth|bith|bilth"'))
+    slug = models.CharField(max_length=255,
+                            help_text=_('The keyword(s) to match in messages '
+                                        'from the user. Specify multiple '
+                                        'keywords by separating them with '
+                                        'vertical bars. e.g., '
+                                        '"birth|bith|bilth"'))
 
     def __unicode__(self):
         return self.name
@@ -30,8 +36,11 @@ class TimelineSubscription(models.Model):
     "Subscribing a user to a timeline of events."
 
     timeline = models.ForeignKey(Timeline, related_name='subscribers')
-    connection = models.ForeignKey('rapidsms.Connection', related_name='timelines')
-    pin = models.CharField(max_length=160, help_text=_('Name, phrase, or digits used when joining the timeline.'))
+    connection = models.ForeignKey('rapidsms.Connection',
+                                   related_name='timelines')
+    pin = models.CharField(max_length=160,
+                           help_text=_('Name, phrase, or digits used when '
+                                       'joining the timeline.'))
     start = models.DateTimeField(_('start date'), default=now)
     end = models.DateTimeField(_('end date'), default=None, null=True)
 
@@ -39,16 +48,19 @@ class TimelineSubscription(models.Model):
         return '%s - %s' % (self.connection, self.timeline)
 
 
-class Milestone(models.Model):
+class Milestone(TranslatableModel):
     "A point on the timeline that when reached creates an occurrence."
 
     name = models.CharField(max_length=255)
     timeline = models.ForeignKey(Timeline, related_name='milestones')
     offset = models.IntegerField()
 
-    # default message for simple timelines of non-interactive messages
-    message = models.CharField(max_length=160, blank=True, null=True,
-                               default=None)
+    # see http://django-hvad.readthedocs.org/
+    translations = TranslatedFields(
+        # default message for simple timelines of non-interactive messages
+        message=models.CharField(max_length=160, blank=True, null=True,
+                                 default=None)
+    )
 
     def __unicode__(self):
         return self.name
@@ -68,16 +80,19 @@ class Occurrence(models.Model):
     ]
 
     milestone = models.ForeignKey(Milestone, related_name='occurrences')
-    subscription = models.ForeignKey(TimelineSubscription, related_name='occurrences')
+    subscription = models.ForeignKey(TimelineSubscription,
+                                     related_name='occurrences')
     date = models.DateField(_('occurence date'))
     completed = models.DateTimeField(blank=True, null=True, default=None)
     reschedule = models.ForeignKey('self', blank=True, null=True,
                                    related_name='occurrences')
-    status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_DEFAULT)
+    status = models.IntegerField(choices=STATUS_CHOICES,
+                                 default=STATUS_DEFAULT)
     notes = models.CharField(max_length=160, blank=True, default='')
 
     def __unicode__(self):
-        return 'Occurrence for %s on %s' % (self.subscription.connection, self.date.isoformat())
+        return 'Occurrence for %s on %s' % (self.subscription.connection,
+                                            self.date.isoformat())
 
     class Meta:
         ordering = ['-date']
@@ -101,15 +116,18 @@ class Action(models.Model):
     )
 
     occurrence = models.ForeignKey(Occurrence, related_name='actions')
-    status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_PENDING)
+    status = models.IntegerField(choices=STATUS_CHOICES,
+                                 default=STATUS_PENDING)
     attempted = models.DateTimeField(blank=True, null=True, default=now)
     completed = models.DateTimeField(blank=True, null=True, default=None)
 
 
-class Notification(Action):
+class Notification(TranslatableModel, Action):
     "Record of subscriber notification for an action."
-    # TODO i18n!
-    message = models.CharField(max_length=160)
+    # see http://django-hvad.readthedocs.org/
+    translations = TranslatedFields(
+        message=models.CharField(max_length=160)
+    )
 
     def __unicode__(self):
         return 'Notification for %s on %s' %\
@@ -119,9 +137,12 @@ class Notification(Action):
     def confirm(self, manual=False):
         "Mark occurrence as completed."
         completed = now()
-        status = Notification.STATUS_MANUAL if manual else Notification.STATUS_COMPLETED
+        status = Notification.STATUS_MANUAL if manual\
+            else Notification.STATUS_COMPLETED
         self.completed = completed
         self.status = status
-        Notification.objects.filter(pk=self.pk).update(completed=completed, status=status)
+        Notification.objects.filter(pk=self.pk).update(completed=completed,
+                                                       status=status)
         self.occurrence.completed = completed
-        Occurrence.objects.filter(pk=self.occurrence_id).update(completed=completed)
+        Occurrence.objects.filter(pk=self.occurrence_id)\
+            .update(completed=completed)

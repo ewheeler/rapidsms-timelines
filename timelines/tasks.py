@@ -4,6 +4,7 @@ from celery import task
 
 from django.db.models import Q, F
 from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import get_language
 try:
     from django.utils.timezone import now
 except ImportError:  # Django < 1.4
@@ -11,7 +12,7 @@ except ImportError:  # Django < 1.4
 
 from rapidsms.router import send
 
-from .models import TimelineSubscription, Occurrence, Notification
+from .models import TimelineSubscription, Occurrence, Notification, Milestone
 
 APPT_REMINDER = _('This is a reminder for your upcoming appointment on %(date)s. Please confirm.')
 
@@ -62,7 +63,13 @@ def send_occurrence_notifications(days=7):
     for appt in appts:
         # TODO allow both static messages AND appointment reminders for a
         # milestone
-        if appt.milestone.message is not None:
+        language = get_language()
+        msg = None
+        try:
+            msg = appt.milestone.message
+        except Milestone.DoesNotExist:
+            pass
+        if msg is not None:
             # if milestone has a default static message, fire away
             msg = appt.milestone.message
         else:

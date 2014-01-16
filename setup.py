@@ -11,6 +11,7 @@ def read_file(filename):
     except IOError:
         return ''
 
+requirements = [line.strip('\n') for line in open('requirements.txt').readlines()]
 
 setup(
     name='rapidsms-timelines',
@@ -38,5 +39,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'Celery>=3.0',
-    ]
+    ],
+    install_requires=requirements
 )

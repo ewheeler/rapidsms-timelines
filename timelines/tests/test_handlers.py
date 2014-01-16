@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from .base import (OccurrenceDataTestCase, Notification, Occurrence,
     TimelineSubscription, now)
+from ..handlers.base import AppointmentHandler
 from ..handlers.confirm import ConfirmHandler
 from ..handlers.move import MoveHandler
 from ..handlers.new import NewHandler
@@ -16,13 +17,14 @@ class NewHandlerTestCase(OccurrenceDataTestCase):
 
     def setUp(self):
         self.timeline = self.create_timeline(name='Test', slug='foo')
+        self.prefix = AppointmentHandler.prefix
 
     def test_help(self):
         "Prefix and keyword should return the help for adding subscriptions."
         replies = NewHandler.test('APPT NEW')
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('APPT NEW <KEY> <NAME/ID> <DATE>' in reply)
+        self.assertTrue(self.prefix + ' NEW <KEY> <NAME/ID> <DATE>' in reply)
 
     def test_match(self):
         "Send a successful match to create user timeline subscription."
@@ -86,13 +88,14 @@ class ConfirmHandlerTestCase(OccurrenceDataTestCase):
         self.milestone = self.create_milestone(timeline=self.timeline)
         self.occurrence = self.create_occurrence(milestone=self.milestone)
         self.notification = self.create_notification(occurrence=self.occurrence)
+        self.prefix = AppointmentHandler.prefix
 
     def test_help(self):
         "Prefix and keyword should return the help."
         replies = ConfirmHandler.test('APPT CONFIRM')
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('APPT CONFIRM <KEY> <NAME/ID>' in reply)
+        self.assertTrue(self.prefix + ' CONFIRM <KEY> <NAME/ID>' in reply)
 
     def test_occurrence_confirmed(self):
         "Successfully confirm an upcoming occurrence."
@@ -151,13 +154,14 @@ class StatusHandlerTestCase(OccurrenceDataTestCase):
         StatusHandler._mock_backend = self.connection.backend
         self.milestone = self.create_milestone(timeline=self.timeline)
         self.occurrence = self.create_occurrence(milestone=self.milestone)
+        self.prefix = AppointmentHandler.prefix
 
     def test_help(self):
         "Prefix and keyword should return the help."
         replies = StatusHandler.test('APPT STATUS')
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('APPT STATUS <KEY> <NAME/ID> <SAW|MISSED>' in reply)
+        self.assertTrue(self.prefix + ' STATUS <KEY> <NAME/ID> <SAW|MISSED>' in reply)
 
     def test_occurrence_status_updated(self):
         "Successfully update a recent occurrence."
@@ -234,13 +238,14 @@ class MoveHandlerTestCase(OccurrenceDataTestCase):
         self.occurrence = self.create_occurrence(milestone=self.milestone,
                                                    date=now() + timedelta(hours=1))
         self.tomorrow = (now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        self.prefix = AppointmentHandler.prefix
 
     def test_help(self):
         "Prefix and keyword should return the help."
         replies = MoveHandler.test('APPT MOVE')
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('APPT MOVE <KEY> <NAME/ID> <DATE>' in reply)
+        self.assertTrue(self.prefix + ' MOVE <KEY> <NAME/ID> <DATE>' in reply)
 
     def test_occurrence_reschedule(self):
         "Successfully reschedule an upcoming occurrence."
@@ -330,13 +335,14 @@ class QuitHandlerTestCase(OccurrenceDataTestCase):
         self.subscription = self.create_timeline_subscription(
             timeline=self.timeline, connection=self.connection, pin='bar')
         QuitHandler._mock_backend = self.connection.backend
+        self.prefix = AppointmentHandler.prefix
 
     def test_help(self):
         "Prefix and keyword should return the help for quitting a subscription."
         replies = QuitHandler.test('APPT QUIT', identity=self.connection.identity)
         self.assertEqual(len(replies), 1)
         reply = replies[0]
-        self.assertTrue('APPT QUIT <KEY> <NAME/ID> <DATE>' in reply)
+        self.assertTrue(self.prefix + ' QUIT <KEY> <NAME/ID> <DATE>' in reply)
 
     def test_match(self):
         "Send a successful match to end a timeline subscription."

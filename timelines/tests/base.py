@@ -8,7 +8,12 @@ from django.contrib.auth.models import User
 from rapidsms.models import Connection, Backend
 from rapidsms.tests.harness import RapidTest
 
-from ..models import Timeline, TimelineSubscription, Milestone, Occurrence, Notification, now
+from ..models import Timeline
+from ..models import TimelineSubscription
+from ..models import Milestone
+from ..models import Occurrence
+from ..models import Notification
+from ..models import now
 
 
 class OccurrenceDataTestCase(RapidTest):
@@ -16,7 +21,8 @@ class OccurrenceDataTestCase(RapidTest):
 
     def get_random_string(self, length=10):
         "Create a random string for generating test data."
-        return ''.join(random.choice(string.ascii_letters) for x in range(length))
+        return ''.join(random.choice(string.ascii_letters)
+                       for x in range(length))
 
     def create_backend(self, **kwargs):
         "Create a dummy backend."
@@ -82,16 +88,19 @@ class OccurrenceDataTestCase(RapidTest):
 
     def create_notification(self, **kwargs):
         "Create a dummy notification."
-        defaults = {
-            'message': self.get_random_string(),
-        }
+        message = self.get_random_string()
+        defaults = {}
         defaults.update(kwargs)
         if 'occurrence' not in defaults:
             defaults['occurrence'] = self.create_occurrence()
-        return Notification.objects.create(**defaults)
+        notification = Notification.objects.create(**defaults)
+        notification.translate('en')
+        notification.message = message
+        notification.save()
+        return notification
 
     def create_user(self, username=None, password=None, email=None,
-            user_permissions=None, groups=None, **kwargs):
+                    user_permissions=None, groups=None, **kwargs):
         username = username or self.random_string(25)
         password = password or self.random_string(25)
         email = email or '{0}@example.com'.format(self.random_string(25))
