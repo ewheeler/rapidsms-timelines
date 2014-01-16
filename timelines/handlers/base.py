@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import re
 
 from django.utils.translation import ugettext_lazy as _
+from django.utils import formats
 
 from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 
@@ -30,6 +31,9 @@ class AppointmentHandler(KeywordHandler):
         form = self.form(data=parsed, connection=self.msg.connection)
         if form.is_valid():
             params = form.save()
+            if 'date' in params:
+                params['date'] = formats.date_format(params['date'],
+                                                     'SHORT_DATE_FORMAT')
             self.respond(self.success_text % params)
         else:
             error = form.error()
