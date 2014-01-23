@@ -8,14 +8,24 @@ from django.forms.util import ErrorList
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Timeline, TimelineSubscription, Occurrence, Notification, now
+from rapidsms.models import Connection
+from rapidsms.models import Backend
+
+from healthcare.api import client
+
+from .models import Timeline
+from .models import TimelineSubscription
+from .models import Occurrence
+from .models import Notification
+from .models import now
 
 
 class PlainErrorList(ErrorList):
     "Customization of the error list for including in an SMS message."
 
     def as_text(self):
-        if not self: return ''
+        if not self:
+            return ''
         return ''.join(['%s' % force_unicode(e) for e in self])
 
 
@@ -41,8 +51,8 @@ class HandlerForm(forms.Form):
                     break
         if match is None:
             # Invalid keyword
-            raise forms.ValidationError(_('Sorry, we could not find any occurrences for '
-                    'the keyword: %s') % keyword)
+            raise forms.ValidationError(_('Sorry, we could not find '
+                    'any occurrences for the keyword: %s') % keyword)
         else:
             self.cleaned_data['timeline'] = match
         return keyword
@@ -71,11 +81,12 @@ class NewForm(HandlerForm):
 
     name = forms.CharField(error_messages={
         'required': _('Sorry, you must include a name or id for your '
-            'occurrences subscription.')
+                      'occurrences subscription.')
     })
     date = forms.DateTimeField(required=False, error_messages={
         'invalid': _('Sorry, we cannot understand that date format. '
-            'For the best results please use the ISO YYYY-MM-DD format.')
+                     'For the best results please use the ISO '
+                     'YYYY-MM-DD format.')
     })
 
     def clean(self):
@@ -89,9 +100,9 @@ class NewForm(HandlerForm):
             )
             if previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
-                message = _('Sorry, you previously registered a %(timeline)s for '
-                        '%(name)s. You will be notified when '
-                        'it is time for the next occurrence.') % params
+                message = _('Sorry, you previously registered a %(timeline)s '
+                            'for %(name)s. You will be notified when '
+                            'it is time for the next occurrence.') % params
                 raise forms.ValidationError(message)
         return self.cleaned_data
 
@@ -107,11 +118,74 @@ class NewForm(HandlerForm):
             timeline=timeline, start=start, pin=name,
             connection=self.connection
         )
+        # FIXME: better matching
+        if timeline == Timeline.objects.get(name='New Birth/Postnatal Care Visits'):
+            patient = client.patients.create(birthdate=start.date())
+
         user = ' %s' % self.connection.contact.name if self.connection.contact else ''
         return {
             'user': user,
             'date': start,
             'name': name,
+            'timeline': timeline.name,
+            'patient': patient,
+        }
+
+
+class SubscribeForm(HandlerForm):
+    "Register a phone for new timeline."
+
+    phone = forms.CharField(error_messages={
+        'required': _('Sorry, you must include a phone number for your '
+                      'subscription.')
+    })
+
+    keyword = forms.CharField(error_messages={
+        'required': _('Sorry, you must include the name of the timeilne for your '
+                      'subscription.')
+    })
+
+    def clean(self):
+        "Check for previous subscription."
+        timeline = self.cleaned_data.get('timeline', None)
+        phone = self.cleaned_data.get('phone', None)
+        # TODO how to choose backend?
+        backend = Backend.objects.get(name='default')
+        self.connection, created = Connection.objects.get_or_create(identity=phone,
+                                                               backend=backend)
+        if phone is not None and timeline is not None:
+            previous = TimelineSubscription.objects.filter(
+                Q(Q(end__isnull=True) | Q(end__gte=now())),
+                timeline=timeline, connection=self.connection, pin=phone
+            )
+            if previous.exists():
+                params = {'timeline': timeline.name, 'phone': phone}
+                message = _('Sorry, you previously registered %(phone)s '
+                            'for %(timeline)s. They will continue to receive '
+                            'messages.') % params
+                raise forms.ValidationError(message)
+        print self.cleaned_data
+        return self.cleaned_data
+
+    def save(self):
+        print 'SAVE'
+        if not self.is_valid():
+            print 'INVALID'
+            return None
+        print 'VALID'
+        timeline = self.cleaned_data['timeline']
+        phone = self.cleaned_data['phone']
+        start = now()
+        # FIXME: There is a small race condition here that we could
+        # create two subscriptions in parallel
+        TimelineSubscription.objects.create(
+            timeline=timeline, start=start, pin=phone,
+            connection=self.connection
+        )
+        user = ' %s' % self.connection.contact.name if self.connection.contact else ''
+        return {
+            'user': user,
+            'phone': phone,
             'timeline': timeline.name,
         }
 
@@ -132,7 +206,8 @@ class ConfirmForm(HandlerForm):
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
-            raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
+            raise forms.ValidationError(_('Sorry, name/id does not match '
+                                          'an active subscription.'))
         try:
             notification = Notification.objects.filter(
                 status=Notification.STATUS_PENDING,
@@ -144,7 +219,8 @@ class ConfirmForm(HandlerForm):
             ).order_by('-attempted')[0]
         except IndexError:
             # No uncompleted notifications
-            raise forms.ValidationError(_('Sorry, you have no uncompleted occurrence notifications.'))
+            raise forms.ValidationError(_('Sorry, you have no uncompleted '
+                                          'occurrence notifications.'))
         else:
             self.cleaned_data['notification'] = notification
         return name
@@ -168,11 +244,13 @@ class StatusForm(HandlerForm):
         "Map values from inbound messages to Occurrence.STATUS_CHOICES"
         raw_status = self.cleaned_data.get('status', '')
         valid_status_update = Occurrence.STATUS_CHOICES[1:]
-        status = next((x[0] for x in valid_status_update if x[1].upper() == raw_status.upper()), None)
+        status = next((x[0] for x in valid_status_update
+                       if x[1].upper() == raw_status.upper()), None)
         if not status:
             choices = tuple([x[1].upper() for x in valid_status_update])
             params = {'choices': ', '.join(choices), 'raw_status': raw_status}
-            msg = _('Sorry, the status update must be in %(choices)s. You supplied %(raw_status)s') % params
+            msg = _('Sorry, the status update must be in %(choices)s. '
+                    'You supplied %(raw_status)s') % params
             raise forms.ValidationError(msg)
         return status
 
@@ -187,7 +265,8 @@ class StatusForm(HandlerForm):
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
-            raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
+            raise forms.ValidationError(_('Sorry, name/id does not match '
+                                          'an active subscription.'))
         try:
             occurrence = Occurrence.objects.filter(
                 status=Occurrence.STATUS_DEFAULT,
@@ -196,7 +275,8 @@ class StatusForm(HandlerForm):
             ).order_by('-date')[0]
         except IndexError:
             # No recent occurrence that is not STATUS_DEFAULT
-            msg = _('Sorry, user has no recent occurrences that require a status update.')
+            msg = _('Sorry, user has no recent occurrences that require '
+                    'a status update.')
             raise forms.ValidationError(msg)
         else:
             self.cleaned_data['occurrence'] = occurrence
@@ -217,8 +297,9 @@ class MoveForm(HandlerForm):
 
     name = forms.CharField()
     date = forms.DateTimeField(error_messages={
-            'invalid': _('Sorry, we cannot understand that date format. '
-            'For the best results please use the ISO YYYY-MM-DD format.')
+        'invalid': _('Sorry, we cannot understand that date format. '
+                     'For the best results please use the '
+                     'ISO YYYY-MM-DD format.')
     })
 
     def clean_date(self):
@@ -227,7 +308,7 @@ class MoveForm(HandlerForm):
         # date should be in the future
         if date and date.date() < now().date():
             raise forms.ValidationError(_('Sorry, the reschedule date %s must '
-                'be in the future') % date)
+                                          'be in the future') % date)
         return date
 
     def clean_name(self):
@@ -241,7 +322,8 @@ class MoveForm(HandlerForm):
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
-            raise forms.ValidationError(_('Sorry, name/id does not match an active subscription.'))
+            raise forms.ValidationError(_('Sorry, name/id does not match '
+                                          'an active subscription.'))
         try:
             occurrence = Occurrence.objects.filter(
                 status=Occurrence.STATUS_DEFAULT,
@@ -252,7 +334,8 @@ class MoveForm(HandlerForm):
             ).order_by('-date')[0]
         except IndexError:
             # No future occurrence
-            msg = _('Sorry, user has no future occurrences that require a reschedule.')
+            msg = _('Sorry, user has no future occurrences that '
+                    'require a reschedule.')
             raise forms.ValidationError(msg)
         else:
             self.cleaned_data['occurrence'] = occurrence
@@ -282,11 +365,12 @@ class QuitForm(HandlerForm):
     keyword = forms.CharField()
     name = forms.CharField(error_messages={
         'required': _('Sorry, you must include a name or id for your '
-            'unsubscription.')
+                      'unsubscription.')
     })
     date = forms.DateTimeField(required=False, error_messages={
         'invalid': _('Sorry, we cannot understand that date format. '
-            'For the best results please use the ISO YYYY-MM-DD format.')
+                     'For the best results please use the '
+                     'ISO YYYY-MM-DD format.')
     })
 
     def clean_keyword(self):
@@ -301,8 +385,9 @@ class QuitForm(HandlerForm):
                     break
         if match is None:
             # Invalid keyword
-            raise forms.ValidationError(_('Sorry, we could not find any occurrences for '
-                    'the keyword: %s') % keyword)
+            raise forms.ValidationError(_('Sorry, we could not find any '
+                                          'occurrences for the keyword: %s')
+                                        % keyword)
         else:
             self.cleaned_data['timeline'] = match
         return keyword
@@ -318,8 +403,8 @@ class QuitForm(HandlerForm):
             )
             if not previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
-                message = _('Sorry, you have not registered a %(timeline)s for '
-                        '%(name)s.') % params
+                message = _('Sorry, you have not registered a %(timeline)s '
+                            'for %(name)s.') % params
                 raise forms.ValidationError(message)
             self.cleaned_data['subscription'] = previous[0]
         return self.cleaned_data

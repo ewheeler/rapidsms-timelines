@@ -7,23 +7,33 @@ from django.utils import formats
 
 from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 
+from ..forms import SubscribeForm
 
 
-class AppointmentHandler(KeywordHandler):
-    "Base keyword handler for the APPT prefix."
+class SubscribeHandler(KeywordHandler):
+    "Base keyword handler for the SUB prefix."
 
-    prefix = 'APPT|REPORT|REP'
-    form = None
-    success_text = ''
+    keyword = 'SUBSCRIBE|SUB'
+    form = SubscribeForm
+    success_text = _('Thank you%(user)s! You registered a %(keyword)s for '
+                     '%(name)s on %(date)s.')
+    help_text = _('To add a phone number to a timeline send: '
+                  '%(prefix)s %(keyword)s <KEY> <PHONE>. ')
 
-    @classmethod
-    def _keyword(cls):
-        if hasattr(cls, "keyword"):
-            pattern = r"^\s*(?:%s)\s*(?:%s)(?:[\s,;:]+(.+))?$"\
-                % (cls.prefix, cls.keyword)
-        else:
-            pattern = r"^\s*(?:%s)\s*?$" % cls.prefix
-        return re.compile(pattern, re.IGNORECASE)
+    #@classmethod
+    #def _keyword(cls):
+    #    pattern = r"^\s*(?:%s)(?:[\s,;:]+(.+))?$" % cls.prefix
+    #    return re.compile(pattern, re.IGNORECASE)
+
+    def parse_message(self, text):
+        "Tokenize message text."
+        result = {}
+        tokens = text.strip().split()
+        result['keyword'] = tokens.pop(0)
+        if tokens:
+            # Next token is the phone number of new subscriber
+            result['phone'] = tokens.pop(0)
+        return result
 
     def handle(self, text):
         "Parse text, validate data, and respond."

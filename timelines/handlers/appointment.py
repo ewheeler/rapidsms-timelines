@@ -8,7 +8,6 @@ from django.utils import formats
 from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 
 
-
 class AppointmentHandler(KeywordHandler):
     "Base keyword handler for the APPT prefix."
 
@@ -31,9 +30,14 @@ class AppointmentHandler(KeywordHandler):
         form = self.form(data=parsed, connection=self.msg.connection)
         if form.is_valid():
             params = form.save()
+            print params
             if 'date' in params:
                 params['date'] = formats.date_format(params['date'],
                                                      'SHORT_DATE_FORMAT')
+            # TODO separate birth handler!
+            if 'patient' in params:
+                self.respond('Congratulations! Please use id %s for the'
+                             ' new child' % params['patient']['id'])
             self.respond(self.success_text % params)
         else:
             error = form.error()
