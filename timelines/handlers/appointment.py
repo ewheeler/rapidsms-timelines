@@ -35,7 +35,7 @@ class AppointmentHandler(KeywordHandler):
                 params['date'] = formats.date_format(params['date'],
                                                      'SHORT_DATE_FORMAT')
             # TODO separate birth handler!
-            if 'patient' in params:
+            if 'patient' in params and params.get('patient') is not None:
                 self.respond('Congratulations! Please use id %s for the'
                              ' new child' % params['patient']['id'])
             self.respond(self.success_text % params)

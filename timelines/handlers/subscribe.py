@@ -1,7 +1,5 @@
 from __future__ import unicode_literals
 
-import re
-
 from django.utils.translation import ugettext_lazy as _
 from django.utils import formats
 
@@ -15,8 +13,8 @@ class SubscribeHandler(KeywordHandler):
 
     keyword = 'SUBSCRIBE|SUB'
     form = SubscribeForm
-    success_text = _('Thank you%(user)s! You registered a %(keyword)s for '
-                     '%(name)s on %(date)s.')
+    success_text = _('Thank you%(user)s! You registered %(phone)s for '
+                     '%(timeline)s.')
     help_text = _('To add a phone number to a timeline send: '
                   '%(prefix)s %(keyword)s <KEY> <PHONE>. ')
 

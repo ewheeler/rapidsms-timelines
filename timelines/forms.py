@@ -119,6 +119,7 @@ class NewForm(HandlerForm):
             connection=self.connection
         )
         # FIXME: better matching
+        patient = None
         if timeline == Timeline.objects.get(name='New Birth/Postnatal Care Visits'):
             patient = client.patients.create(birthdate=start.date())
 

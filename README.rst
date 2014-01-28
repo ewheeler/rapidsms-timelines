@@ -33,6 +33,28 @@ Python packages:
 - Celery >= 3.0.13
 
 
+Usage
+-----------------------------------
+# report new pregancy to enroll in ANC visit reminders
+# CHW can provide a phone number or name to identify the mother
+report new pregnancy 783370954 OR report new pregnancy mary
+
+# if the mother has a mobile number, the mother can be
+# enrolled in advice and reminders during pregancy
+# and after birth
+subscribe mother 783370954
+
+
+# report new birth to enroll in PNC visit reminders
+# CHW can provide a phone number or name to identify the mother
+report new birth 783370954 OR report new birth mary
+
+# if the mother was enrolled in advice and reminders
+# during pregancy, but there is no live birth, cancel
+# further advice messages
+unsubscribe mother 783370954
+
+
 Documentation
 -----------------------------------
 
