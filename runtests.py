@@ -38,7 +38,16 @@ if not settings.configured:
             "message_tester": {
                 "ENGINE": "rapidsms.contrib.httptester.backend",
             },
-        }
+        },
+        RAPIDSMS_HANDLERS = (
+            'timelines.handlers.confirm.ConfirmHandler',
+            'timelines.handlers.move.MoveHandler',
+            'timelines.handlers.new.NewHandler',
+            'timelines.handlers.quit.QuitHandler',
+            'timelines.handlers.status.StatusHandler',
+            'timelines.handlers.subscribe.SubscribeHandler',
+            'timelines.handlers.shift.ShiftHandler',
+        )
     )
 
 

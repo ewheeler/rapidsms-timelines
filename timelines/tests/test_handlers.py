@@ -10,6 +10,7 @@ from ..handlers.move import MoveHandler
 from ..handlers.new import NewHandler
 from ..handlers.quit import QuitHandler
 from ..handlers.status import StatusHandler
+from ..handlers.subscribe import SubscribeHandler
 
 
 class NewHandlerTestCase(OccurrenceDataTestCase):
@@ -391,3 +392,76 @@ class QuitHandlerTestCase(OccurrenceDataTestCase):
         self.assertEqual(len(replies), 1)
         reply = replies[0]
         self.assertTrue(reply.startswith('Sorry'))
+
+
+class SubscribeHandlerTestCase(OccurrenceDataTestCase):
+    "Keyword handler for subscribing users to timelines"
+
+    def setUp(self):
+        self.timeline = self.create_timeline(name='Test', slug='foo')
+
+    def test_help(self):
+        "Keyword should return the help for adding subscriptions."
+        replies = SubscribeHandler.test('SUBSCRIBE')
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue('SUBSCRIBE <KEY> <NAME/ID> <DATE>' in reply)
+
+    def test_match(self):
+        "Send a successful match to create user timeline subscription."
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar')
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Thank you'), reply)
+
+    def test_match_with_date(self):
+        "Use start date if given."
+        tomorrow = (now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar %s' % tomorrow)
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Thank you'), reply)
+
+    def test_match_with_relative_date(self):
+        "Use relative start date if given."
+        two_weeks_ago = "two weeks ago"
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar %s' % two_weeks_ago)
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Thank you'), reply)
+
+    def test_no_keyword_match(self):
+        "Keyword does not match any existing timelines."
+        self.timeline.delete()
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar')
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Sorry'))
+
+    def test_no_name_given(self):
+        "No name is given."
+        replies = SubscribeHandler.test('SUBSCRIBE foo')
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Sorry'))
+
+    def test_invalid_date_format_given(self):
+        "Invalid date format."
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar baz')
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Sorry'))
+
+    def test_already_subscribed(self):
+        "Attempting to register and already registered connection/name pair."
+        connection = self.create_connection()
+        SubscribeHandler._mock_backend = connection.backend
+        self.create_timeline_subscription(timeline=self.timeline,
+            connection=connection, pin='bar')
+        replies = SubscribeHandler.test('SUBSCRIBE foo bar', identity=connection.identity)
+        self.assertEqual(len(replies), 1)
+        reply = replies[0]
+        self.assertTrue(reply.startswith('Sorry'))
+        del SubscribeHandler._mock_backend
+
+

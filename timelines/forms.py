@@ -1,4 +1,8 @@
 from __future__ import unicode_literals
+import datetime
+import time
+
+import parsedatetime
 
 from django import forms
 from django.db.models import Q
@@ -18,6 +22,8 @@ from .models import TimelineSubscription
 from .models import Occurrence
 from .models import Notification
 from .models import now
+
+cal = parsedatetime.Calendar()
 
 
 class PlainErrorList(ErrorList):
@@ -118,9 +124,14 @@ class NewForm(HandlerForm):
             timeline=timeline, start=start, pin=name,
             connection=self.connection
         )
-        # FIXME: better matching
         patient = None
-        if timeline == Timeline.objects.get(name='New Birth/Postnatal Care Visits'):
+        # FIXME: need an api for this kind of thing!
+        pnc_timeline = None
+        try:
+            pnc_timeline = Timeline.objects.get(name='New Birth/Postnatal Care Visits')
+        except Timeline.DoesNotExist:
+            pass
+        if timeline == pnc_timeline:
             patient = client.patients.create(birthdate=start.date())
 
         user = ' %s' % self.connection.contact.name if self.connection.contact else ''
@@ -357,6 +368,93 @@ class MoveForm(HandlerForm):
         reschedule = Occurrence.objects.create(**params)
         occurrence.reschedule = reschedule
         occurrence.save()
+        return {}
+
+
+class ShiftForm(HandlerForm):
+    "Shift timeline for a subscriber"
+
+    name = forms.CharField()
+    date = forms.CharField(error_messages={
+        'invalid': _('Sorry, we cannot understand that date format.')
+    })
+
+    def clean_date(self):
+        "Ensure the date to reschedule is in the future"
+        date = self.cleaned_data.get('date')
+        try:
+            # try ISO8601
+            date = datetime.datetime.strptime(date, '%Y-%m-%d')
+        except:
+            parsed, status = cal.parse(date)
+            if status in [1, 2, 3]:
+                date = datetime.datetime.fromtimestamp(time.mktime(parsed))
+            else:
+                raise forms.ValidationError(_('Sorry, cannot understand %s')
+                                            % date)
+
+        return date
+
+    def clean_name(self):
+        "Find the timeline for the subscriber."
+        timeline = self.cleaned_data.get('timeline', None)
+        name = self.cleaned_data.get('name', '')
+
+        # TODO introduce types of timelines?
+        # e.g., timelines for requesting connection vs
+        # timelines for another connection
+        if timeline.slug == 'mother':
+            # TODO how to choose backend?
+            backend = Backend.objects.get(name='default')
+            self.connection = Connection.objects.get(identity=name,
+                                                              backend=backend)
+        # name should be a pin for an active timeline subscription
+        subscriptions = TimelineSubscription.objects.filter(
+            Q(Q(end__gte=now()) | Q(end__isnull=True)),
+            timeline=timeline, connection=self.connection, pin=name
+        )
+        self.cleaned_data['subscriptions'] = subscriptions
+        timelines = subscriptions.values_list('timeline', flat=True)
+        if not timelines:
+            # PIN doesn't match an active subscription for this connection
+            raise forms.ValidationError(_('Sorry, name/id does not match '
+                                          'an active subscription.'))
+        try:
+            occurrences = Occurrence.objects.filter(
+                status=Occurrence.STATUS_DEFAULT,
+                date__gte=now(),
+                milestone__timeline__in=timelines,
+                reschedule__isnull=True,
+                occurrences__isnull=True,
+            ).order_by('-date')
+        except IndexError:
+            # No future occurrence
+            pass
+            #msg = _('Sorry, user has no future occurrences that '
+            #        'require a reschedule.')
+            #raise forms.ValidationError(msg)
+        else:
+            self.cleaned_data['occurrences'] = occurrences
+        return name
+
+    def save(self):
+        "Mark the occurrence status and return it"
+        if not self.is_valid():
+            return None
+
+        occurrences = self.cleaned_data['occurrences']
+        for occurrence in occurrences:
+            # TODO i think deleting is the right thing
+            # todo here instead of rescheduling..
+            # otherwise there could be upcoming occurences
+            # that are now in the past and will be in a
+            # permanent state of not-yet-occurred
+            occurrence.delete()
+
+        subscriptions = self.cleaned_data['subscriptions']
+        for subscription in subscriptions:
+            subscription.start = self.cleaned_data['date']
+            subscription.save()
         return {}
 
 
