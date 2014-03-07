@@ -9,7 +9,7 @@ from ..forms import ConfirmForm
 class ConfirmHandler(AppointmentHandler):
     "Confirm an appointment notification."
 
-    keyword = 'confirm'
+    keyword = 'confirm|told'
     form = ConfirmForm
     help_text = _('To confirm an upcoming appointment send: %(prefix)s %(keyword)s <KEY> <NAME/ID>')
     success_text = _('Thank you! Your appointment has been confirmed.')

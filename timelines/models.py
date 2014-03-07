@@ -74,9 +74,9 @@ class Occurrence(models.Model):
     STATUS_MISSED = 3
 
     STATUS_CHOICES = [
-        (STATUS_DEFAULT, _('Not Yet Occurred')),
-        (STATUS_ACHIEVED, _('Achieved')),
-        (STATUS_MISSED, _('Missed')),
+        (STATUS_DEFAULT, _('Upcoming')),
+        (STATUS_ACHIEVED, _('Yes')),
+        (STATUS_MISSED, _('No')),
     ]
 
     milestone = models.ForeignKey(Milestone, related_name='occurrences')

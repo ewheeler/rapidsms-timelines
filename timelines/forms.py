@@ -162,7 +162,7 @@ class SubscribeForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         phone = self.cleaned_data.get('phone', None)
         # TODO how to choose backend?
-        backend = Backend.objects.get(name='default')
+        backend = Backend.objects.get(name='kannel-yo')
         self.connection, created = Connection.objects.get_or_create(identity=phone,
                                                                backend=backend)
         if phone is not None and timeline is not None:
