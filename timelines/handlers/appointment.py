@@ -11,7 +11,7 @@ from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 class AppointmentHandler(KeywordHandler):
     "Base keyword handler for the APPT prefix."
 
-    prefix = 'APPT|REPORT|REP'
+    prefix = 'APPT|REPORT|REP|REGISTER|REG'
     form = None
     success_text = ''
 
