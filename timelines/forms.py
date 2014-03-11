@@ -89,10 +89,8 @@ class NewForm(HandlerForm):
         'required': _('Sorry, you must include a name or id for your '
                       'occurrences subscription.')
     })
-    date = forms.DateTimeField(required=False, error_messages={
-        'invalid': _('Sorry, we cannot understand that date format. '
-                     'For the best results please use the ISO '
-                     'YYYY-MM-DD format.')
+    date = forms.CharField(required=False, error_messages={
+        'invalid': _('Sorry, we cannot understand that date format.')
     })
 
     def clean(self):
@@ -118,6 +116,19 @@ class NewForm(HandlerForm):
         timeline = self.cleaned_data['timeline']
         name = self.cleaned_data['name']
         start = self.cleaned_data.get('date', now()) or now()
+        print start
+        try:
+            # try ISO8601
+            start = datetime.datetime.strptime(start, '%Y-%m-%d')
+        except:
+            parsed, status = cal.parse(start)
+            print parsed
+            if status in [1, 2, 3]:
+                start = datetime.datetime.fromtimestamp(time.mktime(parsed))
+            else:
+                raise forms.ValidationError(_('Sorry, cannot understand %s')
+                                            % start)
+
         # FIXME: There is a small race condition here that we could
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
