@@ -12,7 +12,7 @@ class ShiftHandler(KeywordHandler):
     keyword = 'shift'
     form = ShiftForm
     help_text = _('To shift subscription dates send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>')
-    success_text = _('Thank you! The timeline has been shifted and future occurences have been rescheduled.')
+    success_text = _('Thank you! The timeline has been shifted and future occurrences have been rescheduled.')
 
     def parse_message(self, text):
         "Tokenize message text."
