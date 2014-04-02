@@ -14,7 +14,7 @@ from rapidsms.router import send
 
 from .models import TimelineSubscription, Occurrence, Notification, Milestone
 
-APPT_REMINDER = _('This is a reminder for your upcoming appointment on %(date)s. Please confirm.')
+APPT_REMINDER = _('This is a reminder for an upcoming appointment for %(pin)s on %(date)s. Please confirm with "Told %(pin)s" after notifying the patient.')
 
 
 @task()
@@ -74,7 +74,7 @@ def send_occurrence_notifications(days=7):
             msg = appt.milestone.message
         else:
             # otherwise format message as an appointment reminder
-            msg = APPT_REMINDER % {'date': appt.date}
+            msg = APPT_REMINDER % {'date': appt.date, 'pin': appt.subscription.pin}
         send(msg, appt.subscription.connection)
         Notification.objects.create(occurrence=appt,
                                     status=Notification.STATUS_PENDING,

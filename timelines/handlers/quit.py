@@ -11,7 +11,7 @@ class QuitHandler(AppointmentHandler):
 
     keyword = 'quit'
     form = QuitForm
-    success_text = _('Thank you%(user)s! You unsubcribed from the %(timeline)s for '
+    success_text = _('Thank you%(user)s! You unsubscribed from the %(timeline)s for '
         '%(name)s on %(date)s. You will be no longer be notified when it is time for the next appointment.')
     help_text = _('To unsubcribe a user from a timeline send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>. '
         'The date is optional.')
