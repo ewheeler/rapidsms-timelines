@@ -11,6 +11,7 @@ from django.forms.models import model_to_dict
 from django.forms.util import ErrorList
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
 
 from rapidsms.models import Connection
 from rapidsms.models import Backend
@@ -57,8 +58,8 @@ class HandlerForm(forms.Form):
                     break
         if match is None:
             # Invalid keyword
-            raise forms.ValidationError(_('Sorry, we could not find '
-                    'any occurrences for the keyword: %s') % keyword)
+            raise forms.ValidationError(
+                _('Sorry, we could not find any occurrences for the keyword: %s') % keyword)
         else:
             self.cleaned_data['timeline'] = match
         return keyword
@@ -173,9 +174,10 @@ class SubscribeForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         phone = self.cleaned_data.get('phone', None)
         # TODO how to choose backend?
-        backend = Backend.objects.get(name='kannel-yo')
-        self.connection, created = Connection.objects.get_or_create(identity=phone,
-                                                               backend=backend)
+        #backend = Backend.objects.get(name='kannel-yo')
+        backend = Backend.objects.get(name=getattr(settings, 'PREFERED_BACKEND', 'message_tester'))
+        self.connection, created = Connection.objects.get_or_create(
+            identity=phone, backend=backend)
         if phone is not None and timeline is not None:
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
@@ -414,11 +416,12 @@ class ShiftForm(HandlerForm):
         # TODO introduce types of timelines?
         # e.g., timelines for requesting connection vs
         # timelines for another connection
-        if timeline.slug == 'mother':
+        if timeline.slug.find('mother'):
             # TODO how to choose backend?
-            backend = Backend.objects.get(name='default')
-            self.connection = Connection.objects.get(identity=name,
-                                                              backend=backend)
+            backend = Backend.objects.get(
+                name=getattr(settings, "PREFERED_BACKEND", "kanne-yo"))
+            self.connection = Connection.objects.get(
+                identity=name, backend=backend)
         # name should be a pin for an active timeline subscription
         subscriptions = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
