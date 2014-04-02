@@ -419,7 +419,7 @@ class ShiftForm(HandlerForm):
         if timeline.slug.find('mother'):
             # TODO how to choose backend?
             backend = Backend.objects.get(
-                name=getattr(settings, "PREFERED_BACKEND", "kanne-yo"))
+                name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
             self.connection = Connection.objects.get(
                 identity=name, backend=backend)
         # name should be a pin for an active timeline subscription
