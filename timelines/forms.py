@@ -439,6 +439,8 @@ class ShiftForm(HandlerForm):
             # TODO how to choose backend?
             backend = Backend.objects.get(
                 name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
+            if name.isdigit():
+                name = format_msisdn(name)
             self.connection = Connection.objects.get(
                 identity=name, backend=backend)
         # name should be a pin for an active timeline subscription
