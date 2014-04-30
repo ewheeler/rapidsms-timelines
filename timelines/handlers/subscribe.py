@@ -11,10 +11,12 @@ from ..forms import SubscribeForm
 class SubscribeHandler(KeywordHandler):
     "Base keyword handler for the SUB prefix."
 
-    keyword = 'SUBSCRIBE|SUB'
+    keyword = 'SUBSCRIBE|SUB|ADD'
     form = SubscribeForm
+    #success_text = _('Thank you%(user)s! You registered %(phone)s for '
+    #                 '%(timeline)s.')
     success_text = _('Thank you%(user)s! You registered %(phone)s for '
-                     '%(timeline)s.')
+                     'for SMS mother reminders and advise')
     help_text = _('To add a phone number to a timeline send: '
                   '%(prefix)s %(keyword)s <KEY> <PHONE>. ')
 

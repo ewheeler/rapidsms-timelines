@@ -23,8 +23,20 @@ from .models import TimelineSubscription
 from .models import Occurrence
 from .models import Notification
 from .models import now
+import phonenumbers
 
 cal = parsedatetime.Calendar()
+
+
+def format_msisdn(msisdn=None):
+    """ given a msisdn, return in E164 format """
+    assert msisdn is not None
+    num = phonenumbers.parse(msisdn, getattr(settings, 'COUNTRY', 'UG'))
+    is_valid = phonenumbers.is_valid_number(num)
+    if not is_valid:
+        return None
+    return phonenumbers.format_number(
+        num, phonenumbers.PhoneNumberFormat.E164).replace('+', '')
 
 
 class PlainErrorList(ErrorList):
@@ -173,6 +185,10 @@ class SubscribeForm(HandlerForm):
         "Check for previous subscription."
         timeline = self.cleaned_data.get('timeline', None)
         phone = self.cleaned_data.get('phone', None)
+        phone = format_msisdn(phone)
+        if not phone:
+            raise forms.ValidationError(
+                _('Sorry, the phone number %s is invalid' % self.cleaned_data.get('phone', '')))
         # TODO how to choose backend?
         #backend = Backend.objects.get(name='kannel-yo')
         backend = Backend.objects.get(name=getattr(settings, 'PREFERED_BACKEND', 'message_tester'))
@@ -200,6 +216,7 @@ class SubscribeForm(HandlerForm):
         print 'VALID'
         timeline = self.cleaned_data['timeline']
         phone = self.cleaned_data['phone']
+        phone = format_msisdn(phone)
         start = now()
         # FIXME: There is a small race condition here that we could
         # create two subscriptions in parallel
@@ -395,6 +412,8 @@ class ShiftForm(HandlerForm):
     def clean_date(self):
         "Ensure the date to reschedule is in the future"
         date = self.cleaned_data.get('date')
+        # we make sure we support multiple date formats -hacky but yes
+        date = date.replace('/', '-')
         try:
             # try ISO8601
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
@@ -510,6 +529,10 @@ class QuitForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', None)
         if name is not None and timeline is not None:
+            backend = Backend.objects.get(
+                name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
+            self.connection = Connection.objects.get(
+                identity=name, backend=backend)
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
                 timeline=timeline, connection=self.connection, pin=name

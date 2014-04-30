@@ -4,6 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 from ..forms import ShiftForm
+from django.utils import formats
 
 
 class ShiftHandler(KeywordHandler):
