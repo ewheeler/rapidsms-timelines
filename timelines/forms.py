@@ -111,6 +111,7 @@ class NewForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', None)
         if name is not None and timeline is not None:
+            name = name.capitalize()
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
                 timeline=timeline, connection=self.connection, pin=name
@@ -145,7 +146,7 @@ class NewForm(HandlerForm):
         # FIXME: There is a small race condition here that we could
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
-            timeline=timeline, start=start, pin=name,
+            timeline=timeline, start=start, pin=name.capitalize(),
             connection=self.connection
         )
         patient = None
@@ -244,7 +245,7 @@ class ConfirmForm(HandlerForm):
         # name should be a pin for an active timeline subscription
         timelines = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
-            timeline=timeline, connection=self.connection, pin=name
+            timeline=timeline, connection=self.connection, pin=name.capitalize()
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
@@ -303,7 +304,7 @@ class StatusForm(HandlerForm):
         # name should be a pin for an active timeline subscription
         timelines = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
-            timeline=timeline, connection=self.connection, pin=name
+            timeline=timeline, connection=self.connection, pin=name.capitalize()
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
@@ -360,7 +361,7 @@ class MoveForm(HandlerForm):
         # name should be a pin for an active timeline subscription
         timelines = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
-            timeline=timeline, connection=self.connection, pin=name
+            timeline=timeline, connection=self.connection, pin=name.capitalize()
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
@@ -406,6 +407,7 @@ class ShiftForm(HandlerForm):
 
     name = forms.CharField()
     date = forms.CharField(error_messages={
+        'required': _('You must provide the conception date'),
         'invalid': _('Sorry, we cannot understand that date format.')
     })
 
@@ -437,6 +439,7 @@ class ShiftForm(HandlerForm):
         # timelines for another connection
         if timeline.slug.find('mother'):
             # TODO how to choose backend?
+            print name
             backend = Backend.objects.get(
                 name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
             if name.isdigit():
@@ -446,7 +449,7 @@ class ShiftForm(HandlerForm):
         # name should be a pin for an active timeline subscription
         subscriptions = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
-            timeline=timeline, connection=self.connection, pin=name
+            timeline=timeline, connection=self.connection, pin=name.capitalize()
         )
         self.cleaned_data['subscriptions'] = subscriptions
         timelines = subscriptions.values_list('timeline', flat=True)
@@ -531,17 +534,25 @@ class QuitForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', None)
         if name is not None and timeline is not None:
+            name = name.capitalize()
             backend = Backend.objects.get(
                 name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
-            self.connection = Connection.objects.get(
-                identity=name, backend=backend)
+            try:
+                if name.isdigit():
+                    # quiting the mother timeline
+                    name = format_msisdn(name)
+                self.connection = Connection.objects.get(
+                    identity=name, backend=backend)
+            except:
+                pass
+
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
-                timeline=timeline, connection=self.connection, pin=name
+                timeline=timeline, connection=self.connection, pin=name.capitalize()
             )
             if not previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
-                message = _('Sorry, you have not registered a %(timeline)s '
+                message = _('Sorry, you have no active %(timeline)s '
                             'for %(name)s.') % params
                 raise forms.ValidationError(message)
             self.cleaned_data['subscription'] = previous[0]
