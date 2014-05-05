@@ -12,7 +12,7 @@ class StatusHandler(AppointmentHandler):
     keyword = 'status'
     form = StatusForm
     help_text = _('To set the status of the most recent appointment send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <YES|NO>')
-    success_text = _('Thank you! The appointment status has been set.')
+    success_text = _('Thank you! The appointment status has been received.')
 
     def parse_message(self, text):
         "Tokenize message text."

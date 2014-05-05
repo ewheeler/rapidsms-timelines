@@ -10,10 +10,11 @@ from django.utils import formats
 class ShiftHandler(KeywordHandler):
     "Shift timeline for a subscriber"
 
-    keyword = 'shift'
+    keyword = 'shift|set'
     form = ShiftForm
     help_text = _('To shift subscription dates send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>')
-    success_text = _('Thank you! The timeline has been shifted and future occurrences have been rescheduled.')
+    #success_text = _('Thank you! The timeline has been shifted and future occurrences have been rescheduled.')
+    success_text = _("Thank you! The mother's SMS reminders and advise have been adjusted correctly.")
 
     def parse_message(self, text):
         "Tokenize message text."
