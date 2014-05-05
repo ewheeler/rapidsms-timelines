@@ -5,6 +5,7 @@ from celery import task
 from django.db.models import Q, F
 from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import get_language
+from django.conf import settings
 try:
     from django.utils.timezone import now
 except ImportError:  # Django < 1.4
@@ -14,7 +15,7 @@ from rapidsms.router import send
 
 from .models import TimelineSubscription, Occurrence, Notification, Milestone
 
-APPT_REMINDER = _('This is a reminder for an upcoming appointment for %(pin)s on %(date)s. Please confirm with "Told %(pin)s" after notifying the patient.')
+APPT_REMINDER = _('This is a reminder for an upcoming ANC/PNC visit for %(pin)s on %(date)s. Please confirm with "Appt Told %(pin)s" after notifying the mother.')
 
 
 @task()
@@ -36,10 +37,10 @@ def generate_occurrences(days=14):
             #Create occurrence(s) for this subscription within the task window
             if start <= milestone_date <= end:
                 appt, created = Occurrence.objects.get_or_create(
-                                                    subscription=sub,
-                                                    milestone=milestone,
-                                                    date=milestone_date
-                                                    )
+                    subscription=sub,
+                    milestone=milestone,
+                    date=milestone_date
+                )
 
 
 @task()
@@ -65,16 +66,21 @@ def send_occurrence_notifications(days=7):
         # milestone
         language = get_language()
         msg = None
-        try:
-            msg = appt.milestone.message
-        except Milestone.DoesNotExist:
-            pass
-        if msg is not None:
-            # if milestone has a default static message, fire away
-            msg = appt.milestone.message
-        else:
-            # otherwise format message as an appointment reminder
+        translations = appt.milestone.translations.filter(
+            language_code=getattr(settings, 'DEFUALT_LANGUAGE', 'en'))
+            # each Timeline subscription can have a default language
+        if translations:
+            msg = translations[0].message
+        if not msg:
+            try:
+                # if milestone has a default static message, fire away
+                msg = appt.milestone.message
+            except:
+                pass
+        if not msg:
+            # format message as an appointment reminder
             msg = APPT_REMINDER % {'date': appt.date, 'pin': appt.subscription.pin}
+
         send(msg, appt.subscription.connection)
         Notification.objects.create(occurrence=appt,
                                     status=Notification.STATUS_PENDING,
