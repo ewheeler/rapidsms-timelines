@@ -11,9 +11,11 @@ class NewHandler(AppointmentHandler):
 
     keyword = 'new'
     form = NewForm
-    success_text = _('Thank you%(user)s! You registered a %(timeline)s for '
+    success_text = _(
+        'Thank you%(user)s! You registered %(timeline)s for '
         '%(name)s on %(date)s. You will be notified when it is time for the next appointment.')
-    help_text = _('To add a user a timeline send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>. '
+    help_text = _(
+        'To add a user a timeline send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>. '
         'The date is optional.')
 
     def parse_message(self, text):

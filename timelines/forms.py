@@ -111,15 +111,23 @@ class NewForm(HandlerForm):
         "Check for previous subscription."
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', None)
+        # check reporter eligibility
+        reporter = Reporter.objects.filter(contact__connection=self.connection)
+        if not reporter.exists():
+            raise forms.ValidationError(
+                _("Sorry, only registered VHT can register for %s" % timeline.name))
+        else:
+            self.reporter = reporter[0]
         if name is not None and timeline is not None:
             name = name.capitalize()
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
-                timeline=timeline, connection=self.connection, pin=name
+                timeline=timeline, connection=self.connection,
+                pin=name, reporter=self.reporter
             )
             if previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
-                message = _('Sorry, you previously registered a %(timeline)s '
+                message = _('Sorry, you previously registered  %(timeline)s '
                             'for %(name)s. You will be notified when '
                             'it is time for the next occurrence.') % params
                 raise forms.ValidationError(message)
@@ -130,7 +138,9 @@ class NewForm(HandlerForm):
             return None
         timeline = self.cleaned_data['timeline']
         name = self.cleaned_data['name']
-        start = self.cleaned_data.get('date', now()) or now()
+        start = self.cleaned_data.get('date', now().strftime('%Y-%m-%d')) or \
+            now().strftime('%Y-%m-%d')
+        start = start.replace('/', '')
         try:
             # try ISO8601
             start = datetime.datetime.strptime(start, '%Y-%m-%d')
@@ -146,7 +156,7 @@ class NewForm(HandlerForm):
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
             timeline=timeline, start=start, pin=name.capitalize(),
-            connection=self.connection
+            connection=self.connection, reporter=self.reporter
         )
         patient = None
         # FIXME: need an api for this kind of thing!
@@ -458,10 +468,13 @@ class ShiftForm(HandlerForm):
             print name
             backend = Backend.objects.get(
                 name=getattr(settings, "PREFERED_BACKEND", "kannel-yo"))
-            if name.isdigit():
-                name = format_msisdn(name)
-            self.connection = Connection.objects.get(
-                identity=name, backend=backend)
+            try:
+                if name.isdigit():
+                    name = format_msisdn(name)
+                    self.connection = Connection.objects.get(
+                        identity=name, backend=backend)
+            except Connection.DoesNotExist:
+                pass
         # name should be a pin for an active timeline subscription
         subscriptions = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
@@ -567,9 +580,9 @@ class QuitForm(HandlerForm):
                 if name.isdigit():
                     # quiting the mother timeline
                     name = format_msisdn(name)
-                self.connection = Connection.objects.get(
-                    identity=name, backend=backend)
-            except:
+                    self.connection = Connection.objects.get(
+                        identity=name, backend=backend)
+            except Connection.DoesNotExist:
                 pass
 
             previous = TimelineSubscription.objects.filter(
