@@ -22,6 +22,7 @@ from .models import Timeline
 from .models import TimelineSubscription
 from .models import Occurrence
 from .models import Notification
+from .models import Reporter
 from .models import now
 import phonenumbers
 
@@ -130,13 +131,11 @@ class NewForm(HandlerForm):
         timeline = self.cleaned_data['timeline']
         name = self.cleaned_data['name']
         start = self.cleaned_data.get('date', now()) or now()
-        print start
         try:
             # try ISO8601
             start = datetime.datetime.strptime(start, '%Y-%m-%d')
         except:
             parsed, status = cal.parse(start)
-            print parsed
             if status in [1, 2, 3]:
                 start = datetime.datetime.fromtimestamp(time.mktime(parsed))
             else:
@@ -193,12 +192,20 @@ class SubscribeForm(HandlerForm):
         # TODO how to choose backend?
         #backend = Backend.objects.get(name='kannel-yo')
         backend = Backend.objects.get(name=getattr(settings, 'PREFERED_BACKEND', 'message_tester'))
+
+        # check eligibility of reporter
+        reporter = Reporter.objects.filter(contact__connection=self.connection)
+        if not reporter.exists():
+            raise forms.ValidationError(_("You're not registered as a VHT with RemindMi"))
+        else:
+            self.reporter = reporter[0]
+
         self.connection, created = Connection.objects.get_or_create(
             identity=phone, backend=backend)
         if phone is not None and timeline is not None:
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
-                timeline=timeline, connection=self.connection, pin=phone
+                timeline=timeline, reporter=self.reporter, pin=phone
             )
             if previous.exists():
                 params = {'timeline': timeline.name, 'phone': phone}
@@ -223,7 +230,8 @@ class SubscribeForm(HandlerForm):
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
             timeline=timeline, start=start, pin=phone,
-            connection=self.connection
+            connection=self.connection,
+            reporter=self.reporter
         )
         user = ' %s' % self.connection.contact.name if self.connection.contact else ''
         return {
@@ -434,6 +442,14 @@ class ShiftForm(HandlerForm):
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', '')
 
+        reporter = Reporter.objects.filter(contact__connection=self.connection)
+        if not reporter.exists():
+            raise forms.ValidationError(
+                _("Sorry, only registered VHT "
+                    "can adjust your SMS reminders"))
+        else:
+            self.reporter = reporter[0]
+
         # TODO introduce types of timelines?
         # e.g., timelines for requesting connection vs
         # timelines for another connection
@@ -449,7 +465,8 @@ class ShiftForm(HandlerForm):
         # name should be a pin for an active timeline subscription
         subscriptions = TimelineSubscription.objects.filter(
             Q(Q(end__gte=now()) | Q(end__isnull=True)),
-            timeline=timeline, connection=self.connection, pin=name.capitalize()
+            timeline=timeline, connection=self.connection,
+            pin=name.capitalize(), reporter=self.reporter
         )
         self.cleaned_data['subscriptions'] = subscriptions
         timelines = subscriptions.values_list('timeline', flat=True)
@@ -533,6 +550,15 @@ class QuitForm(HandlerForm):
         "Check for previous subscription."
         timeline = self.cleaned_data.get('timeline', None)
         name = self.cleaned_data.get('name', None)
+        # check eligibility of reporter
+        reporter = Reporter.objects.filter(contact__connection=self.connection)
+        if not reporter.exists():
+            raise forms.ValidationError(
+                _("Sorry, only VHT who registered you can "
+                    "deactivate you from system"))
+        else:
+            self.reporter = reporter[0]
+
         if name is not None and timeline is not None:
             name = name.capitalize()
             backend = Backend.objects.get(
@@ -548,7 +574,8 @@ class QuitForm(HandlerForm):
 
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
-                timeline=timeline, connection=self.connection, pin=name.capitalize()
+                timeline=timeline, connection=self.connection,
+                pin=name.capitalize(), reporter=self.reporter
             )
             if not previous.exists():
                 params = {'timeline': timeline.name, 'name': name}

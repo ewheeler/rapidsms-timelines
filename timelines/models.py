@@ -11,6 +11,17 @@ except ImportError:  # Django < 1.4
 
 from hvad.models import TranslatableModel
 from hvad.models import TranslatedFields
+from rapidsms.models import Contact
+
+
+class Reporter(models.Model):
+    contact = models.ForeignKey(Contact, related_name='reporters', unique=True)
+    village = models.CharField(max_length=255, blank=True, default='')
+    facility = models.CharField(max_length=255, blank=True, default='')
+    role = models.CharField(max_length=255, blank=True, default='')
+
+    def __unicode__(self):
+        return self.contact.name
 
 
 class Timeline(models.Model):
@@ -36,6 +47,7 @@ class TimelineSubscription(models.Model):
     "Subscribing a user to a timeline of events."
 
     timeline = models.ForeignKey(Timeline, related_name='subscribers')
+    reporter = models.ForeignKey('timelines.Reporter', related_name='subscriptions', null=True)
     connection = models.ForeignKey('rapidsms.Connection',
                                    related_name='timelines')
     pin = models.CharField(max_length=160,
