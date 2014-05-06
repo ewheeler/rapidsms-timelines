@@ -142,7 +142,6 @@ class NewForm(HandlerForm):
         if not start:
             start = now().strftime('%Y-%m-%d')
         start = start.replace('/', '-')
-        import pdb; pdb.set_trace()
         try:
             # try ISO8601
             start = datetime.datetime.strptime(start, '%Y-%m-%d')
