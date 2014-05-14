@@ -55,6 +55,7 @@ class TimelineSubscription(models.Model):
                                        'joining the timeline.'))
     start = models.DateTimeField(_('start date'), default=now)
     end = models.DateTimeField(_('end date'), default=None, null=True)
+    created_on = models.DateField(auto_now_add=True, default=now())
 
     def __unicode__(self):
         return '%s - %s' % (self.connection, self.timeline)
