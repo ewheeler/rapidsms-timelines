@@ -24,6 +24,23 @@ class Reporter(models.Model):
         return self.contact.name
 
 
+class ReporterList(models.Model):
+    """View for the reporters"""
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    identity = models.TextField(default='')
+    facility = models.TextField(default='')
+    village = models.TextField(default='')
+    created_on = models.DateField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'reporters'
+
+    def __unicode__(self):
+        return self.name
+
+
 class Timeline(models.Model):
     "A series of milestones which users can subscribe for milestone events."
 
