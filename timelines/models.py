@@ -12,6 +12,7 @@ except ImportError:  # Django < 1.4
 from hvad.models import TranslatableModel
 from hvad.models import TranslatedFields
 from rapidsms.models import Contact
+from rapidsms.contrib.messagelog.models import Message
 
 
 class Reporter(models.Model):
@@ -22,23 +23,6 @@ class Reporter(models.Model):
 
     def __unicode__(self):
         return self.contact.name
-
-
-class ReporterList(models.Model):
-    """View for the reporters"""
-    id = models.IntegerField(primary_key=True)
-    name = models.CharField(max_length=100)
-    identity = models.TextField(default='')
-    facility = models.TextField(default='')
-    village = models.TextField(default='')
-    created_on = models.DateField(null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'reporters'
-
-    def __unicode__(self):
-        return self.name
 
 
 class Timeline(models.Model):
@@ -65,6 +49,7 @@ class TimelineSubscription(models.Model):
 
     timeline = models.ForeignKey(Timeline, related_name='subscribers')
     reporter = models.ForeignKey('timelines.Reporter', related_name='subscriptions', null=True)
+    message = models.ForeignKey(Message, related_name='timeline_message', null=True)
     connection = models.ForeignKey('rapidsms.Connection',
                                    related_name='timelines')
     pin = models.CharField(max_length=160,
@@ -176,3 +161,52 @@ class Notification(TranslatableModel, Action):
         self.occurrence.completed = completed
         Occurrence.objects.filter(pk=self.occurrence_id)\
             .update(completed=completed)
+
+
+class MessageErrorLog(models.Model):
+    """Helps to keep track of messages that resulted into errors"""
+    message = models.ForeignKey(Message, related_name='message')
+
+    def __unicode__(self):
+        return self.message
+
+# Add Some views
+
+
+class ReporterList(models.Model):
+    """View for the reporters"""
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    identity = models.TextField(default='')
+    facility = models.TextField(default='')
+    village = models.TextField(default='')
+    created_on = models.DateField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'reporters'
+
+    def __unicode__(self):
+        return self.name
+
+
+class MessagesList(models.Model):
+    """View for the reporters"""
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    identity = models.TextField(default='')
+    facility = models.TextField(default='')
+    village = models.TextField(default='')
+    date = models.DateField(null=True)
+    text = models.TextField(default='')
+    direction = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'messages_view'
+
+    def __unicode__(self):
+        # crop the text (to avoid exploding the admin)
+        text = self.text if len(self.text) < 60 else "%s..." % self.text[0:57]
+        direction = "to" if self.direction == 'O' else "from"
+        return "%s (%s %s)" % (text, direction, self.identity)
