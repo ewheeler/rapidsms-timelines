@@ -26,6 +26,7 @@ class Migration(SchemaMigration):
         db.add_column(u'timelines_timelinesubscription', 'message',
                       self.gf('django.db.models.fields.related.ForeignKey')(related_name=u'timeline_message', null=True, to=orm['messagelog.Message']),
                       keep_default=False)
+        run_file("0006_auto__add_messageerrorlog__add_field_timelinesubscription_message.sql")
 
 
     def backwards(self, orm):
