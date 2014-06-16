@@ -14,7 +14,7 @@ class ShiftHandler(KeywordHandler):
     form = ShiftForm
     help_text = _('To shift subscription dates send: %(prefix)s %(keyword)s <KEY> <NAME/ID> <DATE>')
     #success_text = _('Thank you! The timeline has been shifted and future occurrences have been rescheduled.')
-    success_text = _("Thank you! The mother's SMS reminders and advise have been adjusted correctly.")
+    success_text = _("Thank you %(user)s! The mother's SMS reminders and advise have been adjusted correctly.")
 
     def parse_message(self, text):
         "Tokenize message text."
@@ -32,7 +32,7 @@ class ShiftHandler(KeywordHandler):
     def handle(self, text):
         "Parse text, validate data, and respond."
         parsed = self.parse_message(text)
-        form = self.form(data=parsed, connection=self.msg.connection)
+        form = self.form(data=parsed, connection=self.msg.connection, msg=self.msg.logger_msg)
         if form.is_valid():
             params = form.save()
             if 'date' in params:

@@ -56,6 +56,7 @@ class HandlerForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.connection = kwargs.pop('connection', None)
+        self.msg = kwargs.pop('msg', None)
         kwargs['error_class'] = PlainErrorList
         super(HandlerForm, self).__init__(*args, **kwargs)
 
@@ -123,7 +124,7 @@ class NewForm(HandlerForm):
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
                 timeline=timeline, connection=self.connection,
-                pin=name, reporter=self.reporter
+                pin=name, reporter=self.reporter, message=self.msg
             )
             if previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
@@ -157,7 +158,7 @@ class NewForm(HandlerForm):
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
             timeline=timeline, start=start, pin=name.capitalize(),
-            connection=self.connection, reporter=self.reporter
+            connection=self.connection, reporter=self.reporter, message=self.msg
         )
         patient = None
         # FIXME: need an api for this kind of thing!
@@ -242,7 +243,8 @@ class SubscribeForm(HandlerForm):
         TimelineSubscription.objects.create(
             timeline=timeline, start=start, pin=phone,
             connection=self.connection,
-            reporter=self.reporter
+            reporter=self.reporter,
+            message=self.msg
         )
         user = ' %s' % self.connection.contact.name if self.connection.contact else ''
         return {

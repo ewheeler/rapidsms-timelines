@@ -38,7 +38,7 @@ class SubscribeHandler(KeywordHandler):
     def handle(self, text):
         "Parse text, validate data, and respond."
         parsed = self.parse_message(text)
-        form = self.form(data=parsed, connection=self.msg.connection)
+        form = self.form(data=parsed, connection=self.msg.connection, msg=self.msg.logger_msg)
         if form.is_valid():
             params = form.save()
             if 'date' in params:
