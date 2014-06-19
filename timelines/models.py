@@ -210,3 +210,22 @@ class MessagesList(models.Model):
         text = self.text if len(self.text) < 60 else "%s..." % self.text[0:57]
         direction = "to" if self.direction == 'O' else "from"
         return "%s (%s %s)" % (text, direction, self.identity)
+
+
+class SubscriptionView(models.Model):
+    id = models.IntegerField(primary_key=True)
+    timeline = models.ForeignKey(Timeline, related_name='subscriptions')
+    pin = models.CharField(max_length=100)
+    created_on = models.DateField()
+    start = models.DateTimeField()
+    end = models.DateTimeField()
+    facility = models.TextField()
+    village = models.TextField()
+    role = models.TextField()
+    identity = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
+    text = models.TextField()
+
+    class Meta:
+        managed = False
+        db_table = 'subscriptions_view'

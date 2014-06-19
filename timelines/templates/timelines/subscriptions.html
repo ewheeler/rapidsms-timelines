@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% load forms_tags django_tables2 %}
+
+{% block title %}Filter Timeline Subscriptions{% endblock title %}
+
+{% block extra_javascript %}
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/jquery.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/jquery.dataTables.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/blueprint.js"></script>
+    <script>
+        $(document).ready(function() {
+
+            $('#filter_table tfoot th').each(function () {
+                var title = $('#filter_table thead th').eq($(this).index()).text();
+                $(this).html('<input type="text" class="filter" placeholder="Search '+ title +'"/>');
+            });
+
+            var table = $('#filter_table').DataTable();
+            $('#filter_table tfoot input').on('keyup change', function(){
+                table
+                    .column($(this).parent().index() + ':visible')
+                    .search(this.value)
+                    .draw();
+            });
+            $('#filter_table').dataTables({"scrollX": true});
+
+        })
+    </script>
+{% endblock extra_javascript %}
+
+{% block extra_stylesheets %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}timelines/fonts/fonts.css">
+    <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}timelines/stylesheets/jquery.dataTables.css" />
+    <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}timelines/stylesheets/timelines.css" />
+    <style>
+        .filter{width: 100px;}
+    </style>
+
+{% endblock extra_stylesheets %}
+
+{% block content %}
+    <div class="span12" id="timelines">
+        <div class="page-header"><h3>Filter timeline Subscriptions</h3></div>
+        <div class="row-fluid">
+            <table id="filter_table" class="display">
+                <thead>
+                    <tr>
+                        <th>Timeline</th>
+                        <th>Subscription Date</th>
+                        <th>Facility</th>
+                        <th>Village</th>
+                        <th>Mother</th>
+                        <th>VHT</th>
+                        <th>Start Date</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                    <tr>
+                        <th>Timeline</th>
+                        <th>Date</th>
+                        <th>Facility</th>
+                        <th>Village</th>
+                        <th>Mother</th>
+                        <th>VHT</th>
+                        <th>Conception Date</th>
+                        <th>Message</th>
+                    </tr>
+                </tfoot>
+                <tbody>
+                    {% for s in subs %}
+                        <tr>
+                            <td>{{ s.timeline }}</td>
+                            <td>{{ s.created_on }}</td>
+                            <td>{{ s.facility }}</td>
+                            <td>{{ s.village }}</td>
+                            <td>{{ s.pin }}</td>
+                            <td>{{ s.name }} ({{s.identity}})</td>
+                            <td>{{ s.start }}</td>
+                            <td>{{ s.text }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock content %}

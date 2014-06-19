@@ -8,11 +8,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 from django.views.generic.base import TemplateView
+from django.template import RequestContext
+from django.shortcuts import render_to_response
+from django.core.cache import cache
 
 from django_tables2 import RequestConfig
 
 from .forms import OccurrenceFilterForm
 from .tables import ApptTable
+from .models import SubscriptionView
 
 
 class OccurrenceMixin(object):
@@ -78,3 +82,15 @@ class CSVOccurrenceList(OccurrenceMixin, View):
                 row.append(cell)
             rows.append(row)
         return rows
+
+
+def subscriptionsView(request):
+    if not cache.get('subs'):
+        subs = SubscriptionView.objects.all()
+        cache.set('subs', subs, 60 * 10)
+    else:
+        subs = cache.get('subs')
+    return render_to_response(
+        "timelines/subscriptions.html",
+        {'subs': subs},
+        context_instance=RequestContext(request))

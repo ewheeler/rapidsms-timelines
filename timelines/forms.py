@@ -8,6 +8,7 @@ from django import forms
 from django.db.models import Q
 from django.forms.forms import NON_FIELD_ERRORS
 from django.forms.models import model_to_dict
+from django.forms import ModelForm
 from django.forms.util import ErrorList
 from django.utils.encoding import force_unicode
 from django.utils.translation import ugettext_lazy as _
@@ -24,6 +25,7 @@ from .models import Occurrence
 from .models import Notification
 from .models import Reporter
 from .models import now
+from .models import SubscriptionView
 import phonenumbers
 
 cal = parsedatetime.Calendar()
@@ -658,3 +660,9 @@ class OccurrenceFilterForm(forms.Form):
             filters = dict([(k, v) for k, v in self.cleaned_data.iteritems() if v or v is False])
             return Occurrence.objects.filter(**filters)
         return Occurrence.objects.none()
+
+
+class FilterForm(ModelForm):
+    """form for filtering  """
+    class Meta:
+        model = SubscriptionView

@@ -13,4 +13,5 @@ urlpatterns = patterns('',
         views.CSVOccurrenceList.as_view(),
         name='csv_occurrence_list',
     ),
+    url(r'^filter/$', views.subscriptionsView, name='subscriptions-view'),
 )
