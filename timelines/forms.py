@@ -194,6 +194,9 @@ class SubscribeForm(HandlerForm):
         'required': _('Sorry, you must include the name of the timeilne for your '
                       'subscription.')
     })
+    date = forms.CharField(required=False, error_messages={
+        'invalid': _('Sorry, we cannot understand that date format.')
+    })
 
     def clean(self):
         "Check for previous subscription."
@@ -239,7 +242,20 @@ class SubscribeForm(HandlerForm):
         timeline = self.cleaned_data['timeline']
         phone = self.cleaned_data['phone']
         phone = format_msisdn(phone)
-        start = now()
+        start = self.cleaned_data.get('date')
+        if not start:
+            start = now().strftime('%Y-%m-%d')
+        start = start.replace('/', '-')
+        try:
+            # try ISO8601
+            start = datetime.datetime.strptime(start, '%Y-%m-%d')
+        except:
+            parsed, status = cal.parse(start)
+            if status in [1, 2, 3]:
+                start = datetime.datetime.fromtimestamp(time.mktime(parsed))
+            else:
+                raise forms.ValidationError(_('Sorry, cannot understand %s')
+                                            % start)
         # FIXME: There is a small race condition here that we could
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
