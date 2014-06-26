@@ -254,8 +254,9 @@ class SubscribeForm(HandlerForm):
             if status in [1, 2, 3]:
                 start = datetime.datetime.fromtimestamp(time.mktime(parsed))
             else:
-                raise forms.ValidationError(_('Sorry, cannot understand %s')
-                                            % start)
+                #raise forms.ValidationError(_('Sorry, cannot understand %s')
+                #                            % start)
+                start = now()
         # FIXME: There is a small race condition here that we could
         # create two subscriptions in parallel
         TimelineSubscription.objects.create(
