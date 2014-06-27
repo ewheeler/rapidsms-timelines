@@ -26,6 +26,7 @@ from .models import Notification
 from .models import Reporter
 from .models import now
 from .models import SubscriptionView
+from .models import MessageErrorLog
 import phonenumbers
 
 cal = parsedatetime.Calendar()
@@ -133,6 +134,7 @@ class NewForm(HandlerForm):
                 message = _('Sorry, you previously registered  %(timeline)s '
                             'for %(name)s. You will be notified when '
                             'it is time for the next occurrence.') % params
+                MessageErrorLog.objects.create(message=self.msg)
                 raise forms.ValidationError(message)
         return self.cleaned_data
 
@@ -204,6 +206,7 @@ class SubscribeForm(HandlerForm):
         phone = self.cleaned_data.get('phone', None)
         phone = format_msisdn(phone)
         if not phone:
+            MessageErrorLog.objects.create(message=self.msg)
             raise forms.ValidationError(
                 _('Sorry, the phone number %s is invalid' % self.cleaned_data.get('phone', '')))
         # TODO how to choose backend?
@@ -229,6 +232,7 @@ class SubscribeForm(HandlerForm):
                 message = _('Sorry, you previously registered %(phone)s '
                             'for %(timeline)s. They will continue to receive '
                             'messages.') % params
+                MessageErrorLog.objects.create(message=self.msg)
                 raise forms.ValidationError(message)
         print self.cleaned_data
         return self.cleaned_data
@@ -405,6 +409,7 @@ class MoveForm(HandlerForm):
         ).values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
+            MessageErrorLog.objects.create(message=self.msg)
             raise forms.ValidationError(_('Sorry, name/id does not match '
                                           'an active subscription.'))
         try:
@@ -417,6 +422,7 @@ class MoveForm(HandlerForm):
             ).order_by('-date')[0]
         except IndexError:
             # No future occurrence
+            MessageErrorLog.objects.create(message=self.msg)
             msg = _('Sorry, user has no future occurrences that '
                     'require a reschedule.')
             raise forms.ValidationError(msg)
@@ -507,6 +513,7 @@ class ShiftForm(HandlerForm):
         timelines = subscriptions.values_list('timeline', flat=True)
         if not timelines:
             # PIN doesn't match an active subscription for this connection
+            MessageErrorLog.objects.create(message=self.msg)
             raise forms.ValidationError(_('Sorry, name/id does not match '
                                           'an active subscription.'))
         try:
@@ -614,6 +621,7 @@ class QuitForm(HandlerForm):
             )
             if not previous.exists():
                 params = {'timeline': timeline.name, 'name': name}
+                MessageErrorLog.objects.create(message=self.msg)
                 message = _('Sorry, you have no active %(timeline)s '
                             'for %(name)s.') % params
                 raise forms.ValidationError(message)
