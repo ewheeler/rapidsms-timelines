@@ -33,6 +33,9 @@ class SubscribeHandler(KeywordHandler):
         if tokens:
             # Next token is the phone number of new subscriber
             result['phone'] = tokens.pop(0)
+        if tokens:
+            # get the conception date if provided
+            result['date'] = tokens.pop(0)
         return result
 
     def handle(self, text):
