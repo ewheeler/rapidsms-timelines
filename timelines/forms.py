@@ -225,11 +225,11 @@ class SubscribeForm(HandlerForm):
         if phone is not None and timeline is not None:
             previous = TimelineSubscription.objects.filter(
                 Q(Q(end__isnull=True) | Q(end__gte=now())),
-                timeline=timeline, reporter=self.reporter, pin=phone
+                timeline=timeline, pin=phone
             )
             if previous.exists():
                 params = {'timeline': timeline.name, 'phone': phone}
-                message = _('Sorry, you previously registered %(phone)s '
+                message = _('Sorry, mother %(phone)s is already registered'
                             'for %(timeline)s. They will continue to receive '
                             'messages.') % params
                 MessageErrorLog.objects.create(message=self.msg)
