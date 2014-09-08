@@ -46,6 +46,8 @@ SELECT
     a.created_on,
     a."start",
     a."end",
+    a.reporter_id,
+    b.id as contact_id,
     d.facility,
     d.village,
     d.role,
@@ -67,3 +69,47 @@ WHERE
     AND
     a.connection_id = c.id;
 
+CREATE OR REPLACE FUNCTION timeline_subscriptions(contactid int, timeline text)
+RETURNS INT AS $delim$
+    DECLARE
+    subs INT;
+    tline INT;
+    BEGIN
+        SELECT id INTO tline FROM timelines_timeline WHERE name = timeline;
+        IF NOT FOUND THEN
+            RETURN 0;
+        END IF;
+        SELECT count(*) INTO subs FROM subscriptions_view
+            WHERE contact_id = contactid AND timeline_id = tline;
+        IF NOT FOUND THEN
+            RETURN 0;
+        END IF;
+        RETURN subs;
+    END;
+$delim$ LANGUAGE 'plpgsql';
+
+CREATE OR REPLACE FUNCTION no_of_confirmed_visits(contactid int)
+RETURNS INT AS $delim$
+    DECLARE
+    cvisits INT;
+    BEGIN
+        SELECT count(*) INTO cvisits FROM timelines_occurrence
+        WHERE subscription_id
+            IN (SELECT id FROM subscriptions_view WHERE contact_id = contactid);
+    IF NOT FOUND THEN
+        RETURN 0;
+    END IF;
+
+    RETURN cvisits;
+    END;
+$delim$ LANGUAGE 'plpgsql';
+
+DROP VIEW IF EXISTS performance_view;
+CREATE VIEW performance_view AS
+    SELECT
+        *, timeline_subscriptions(id, 'ANC/PNC Advice') as advice_subs,
+        timeline_subscriptions(id, 'New pregancy/Antenatal Care Visits') as preg_subs,
+        timeline_subscriptions(id, 'New Birth/Postnatal Care Visits') as birth_subs ,
+        no_of_confirmed_visits(id) as cvisits
+    FROM
+        reporters;

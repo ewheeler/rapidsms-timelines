@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% load forms_tags django_tables2 %}
+
+{% block title %}VHT Performance Rating{% endblock title %}
+
+{% block extra_javascript %}
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/jquery.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/jquery.dataTables.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}timelines/javascripts/blueprint.js"></script>
+    <script>
+        $(document).ready(function() {
+
+            $('#filter_table tfoot th').each(function () {
+                var title = $('#filter_table thead th').eq($(this).index()).text();
+                $(this).html('<input type="text" class="filter" placeholder="Search '+ title +'"/>');
+            });
+
+            var table = $('#filter_table');
+            $('#filter_table tfoot input').on('keyup change', function(){
+                table
+                    .column($(this).parent().index() + ':visible')
+                    .search(this.value)
+                    .draw();
+            });
+            $('#filter_table').dataTable({
+                "scrollX": true,
+                "order": [
+                    [5, "desc"],
+                    [6, "desc"],
+                    [7, "desc"],
+                    [8, "desc"],
+                ]
+            });
+
+        })
+    </script>
+{% endblock extra_javascript %}
+
+{% block extra_stylesheets %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}timelines/fonts/fonts.css">
+    <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}timelines/stylesheets/jquery.dataTables.css" />
+    <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}timelines/stylesheets/timelines.css" />
+    <style>
+        .filter{width: 100px;}
+    </style>
+
+{% endblock extra_stylesheets %}
+
+{% block content %}
+    <div class="span12" id="timelines">
+        <div class="page-header"><h3>Performance Ranking for VHTs</h3></div>
+        <div class="row-fluid">
+            <table id="filter_table" class="display">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone Number</th>
+                        <th>Creation Date</th>
+                        <th>Facility</th>
+                        <th>Village</th>
+                        <th>ANC/PNC Advice</th>
+                        <th>Preg/ANC Visits</th>
+                        <th>Birth/PNC Visits</th>
+                        <th>Confirmed Vists</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone Number</th>
+                        <th>Creation Date</th>
+                        <th>Facility</th>
+                        <th>Village</th>
+                        <th>ANC/PNC Advice</th>
+                        <th>Preg/ANC Visits</th>
+                        <th>Birth/PNC Visits</th>
+                        <th>Confirmed Vists</th>
+                    </tr>
+                </tfoot>
+                <tbody>
+                    {% for p in performance %}
+                        <tr>
+                            <td>{{ p.name }}</td>
+                            <td>{{ p.identity }}</td>
+                            <td>{{ p.created_on }}</td>
+                            <td>{{ p.facility }}</td>
+                            <td>{{ p.village }}</td>
+                            <td>{{ p.advice_subs }}</td>
+                            <td>{{ p.preg_subs }}</td>
+                            <td>{{ p.birth_subs }}</td>
+                            <td>{{ p.cvisits }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock content %}

@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from timelines.unicsv import UnicodeCSVWriter
 
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, login_required
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.decorators import method_decorator
@@ -16,7 +16,7 @@ from django_tables2 import RequestConfig
 
 from .forms import OccurrenceFilterForm
 from .tables import ApptTable
-from .models import SubscriptionView
+from .models import SubscriptionView, PerformanceView
 
 
 class OccurrenceMixin(object):
@@ -84,6 +84,7 @@ class CSVOccurrenceList(OccurrenceMixin, View):
         return rows
 
 
+@login_required
 def subscriptionsView(request):
     if not cache.get('subs'):
         subs = SubscriptionView.objects.all()
@@ -93,4 +94,18 @@ def subscriptionsView(request):
     return render_to_response(
         "timelines/subscriptions.html",
         {'subs': subs},
+        context_instance=RequestContext(request))
+
+
+@login_required
+def performanceView(request):
+    if not cache.get('performance'):
+        performance = PerformanceView.objects.all().order_by(
+            '-advice_subs', '-preg_subs', '-birth_subs', '-cvisits')
+        cache.set('performance', performance, 60 * 10)
+    else:
+        performance = cache.get('performance')
+    return render_to_response(
+        "timelines/performance.html",
+        {'performance': performance},
         context_instance=RequestContext(request))

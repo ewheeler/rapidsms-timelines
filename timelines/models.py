@@ -229,3 +229,20 @@ class SubscriptionView(models.Model):
     class Meta:
         managed = False
         db_table = 'subscriptions_view'
+
+
+class PerformanceView(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    created_on = models.DateField()
+    identity = models.CharField(max_length=100)
+    facility = models.TextField()
+    village = models.TextField()
+    advice_subs = models.IntegerField()
+    preg_subs = models.IntegerField()
+    birth_subs = models.IntegerField()
+    cvisits = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'performance_view'
