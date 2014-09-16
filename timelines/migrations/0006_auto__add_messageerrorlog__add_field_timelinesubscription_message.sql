@@ -104,12 +104,29 @@ RETURNS INT AS $delim$
     END;
 $delim$ LANGUAGE 'plpgsql';
 
+CREATE OR REPLACE FUNCTION last_reported(contactid int)
+RETURNS TIMESTAMP AS $delim$
+    DECLARE
+    lr TIMESTAMP;
+    BEGIN
+        SELECT date INTO lr FROM messagelog_message
+        WHERE contact_id = contactid AND direction = 'I'
+        ORDER by date DESC LIMIT 1;
+    IF NOT FOUND THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN lr;
+    END;
+$delim$ LANGUAGE 'plpgsql';
+
 DROP VIEW IF EXISTS performance_view;
 CREATE VIEW performance_view AS
     SELECT
         *, timeline_subscriptions(id, 'ANC/PNC Advice') as advice_subs,
         timeline_subscriptions(id, 'New pregancy/Antenatal Care Visits') as preg_subs,
         timeline_subscriptions(id, 'New Birth/Postnatal Care Visits') as birth_subs ,
-        no_of_confirmed_visits(id) as cvisits
+        no_of_confirmed_visits(id) as cvisits,
+        last_reported(id) as last_reporting_date
     FROM
         reporters;

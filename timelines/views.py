@@ -17,6 +17,8 @@ from django_tables2 import RequestConfig
 from .forms import OccurrenceFilterForm
 from .tables import ApptTable
 from .models import SubscriptionView, PerformanceView
+from openpyxl import Workbook
+from openpyxl.cell import get_column_letter
 
 
 class OccurrenceMixin(object):
@@ -109,3 +111,38 @@ def performanceView(request):
         "timelines/performance.html",
         {'performance': performance},
         context_instance=RequestContext(request))
+
+
+@login_required
+def performanceExcelView(request):
+    wb = Workbook(encoding='utf-8')
+    sheet1 = wb.worksheets[0]
+    header = [
+        'Name', 'Phone Number', 'Creation Date', 'Facility', 'Village',
+        'ANC/PNC Advice Registrations', 'Preg/ANC Visit Registered',
+        'Birth/PNC Visits Registered', 'No. of Confirmed Visits', 'Last Reporting Date'
+    ]
+    if not cache.get('performance'):
+        performance = PerformanceView.objects.all().order_by(
+            '-advice_subs', '-preg_subs', '-birth_subs', '-cvisits'
+        )
+    else:
+        performance = cache.get('performance')
+    performance_data = performance.values_list(
+        'name', 'identity', 'created_on', 'facility', 'village',
+        'advice_subs', 'preg_subs', 'birth_subs', 'cvisits',
+        'last_reporting_date'
+    )
+
+    for hcol, hcol_data in enumerate(header, start=1):
+        col_idx = get_column_letter(hcol)
+        sheet1.cell('%s%s' % (col_idx, 1)).value = hcol_data
+
+    for row, row_data in enumerate(performance_data, start=2):  # start from row no.2
+        for col, col_data in enumerate(row_data, start=1):
+            col_idx = get_column_letter(col)
+            sheet1.cell('%s%s' % (col_idx, row)).value = col_data
+    response = HttpResponse(mimetype='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename=performance_data.xlsx'
+    wb.save(response)
+    return response

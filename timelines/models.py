@@ -242,6 +242,7 @@ class PerformanceView(models.Model):
     preg_subs = models.IntegerField()
     birth_subs = models.IntegerField()
     cvisits = models.IntegerField()
+    last_reporting_date = models.DateTimeField()
 
     class Meta:
         managed = False

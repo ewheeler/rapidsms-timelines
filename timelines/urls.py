@@ -15,4 +15,5 @@ urlpatterns = patterns('',
     ),
     url(r'^filter/$', views.subscriptionsView, name='subscriptions-view'),
     url(r'^performance/$', views.performanceView, name='performance-view'),
+    url(r'^export/$', views.performanceExcelView, name='performance-excel'),
 )
